@@ -1,51 +1,39 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { Colors } from '@/constants/colors';
+import { Image, StyleSheet, View } from 'react-native';
 
 type LogoSize = 'sm' | 'md' | 'lg';
 
-const sizeConfig: Record<LogoSize, { circle: number; letter: number; text: number }> = {
-  sm: { circle: 30, letter: 16, text: 18 },
-  md: { circle: 40, letter: 22, text: 24 },
-  lg: { circle: 52, letter: 28, text: 30 },
+const sizeConfig: Record<LogoSize, number> = {
+  sm: 48,
+  md: 80,
+  lg: 110,
 };
 
+const logoImage = require('@/assets/images/logo.png');
+
 export function Logo({ size = 'md' }: { size?: LogoSize }) {
-  const config = sizeConfig[size];
+  const diameter = sizeConfig[size];
 
   return (
-    <View style={styles.container}>
-      <View
-        style={[
-          styles.circle,
-          { width: config.circle, height: config.circle, borderRadius: config.circle / 2 },
-        ]}
-      >
-        <Text style={[styles.letter, { fontSize: config.letter }]}>R</Text>
-      </View>
-      <Text style={[styles.wordmark, { fontSize: config.text }]}>RedeemSoft</Text>
+    <View
+      style={[
+        styles.circle,
+        { width: diameter, height: diameter, borderRadius: diameter / 2 },
+      ]}
+    >
+      <Image
+        source={logoImage}
+        style={{ width: diameter, height: diameter, borderRadius: diameter / 2 }}
+        resizeMode="cover"
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
   circle: {
-    backgroundColor: Colors.primary,
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  letter: {
-    color: Colors.white,
-    fontWeight: '800',
-  },
-  wordmark: {
-    color: Colors.white,
-    fontWeight: '800',
-    letterSpacing: -0.5,
   },
 });

@@ -37,8 +37,16 @@ export default function LoginScreen() {
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
+  const extra = Constants.expoConfig?.extra ?? {};
+  const webClientId: string = extra.googleWebClientId ?? '';
+  const androidClientId: string = extra.googleAndroidClientId ?? webClientId;
+  const iosClientId: string = extra.googleIosClientId ?? webClientId;
+  const isGoogleConfigured = webClientId !== '' && webClientId !== 'YOUR_GOOGLE_WEB_CLIENT_ID.apps.googleusercontent.com';
+
   const [, response, promptAsync] = Google.useAuthRequest({
-    webClientId: Constants.expoConfig?.extra?.googleWebClientId,
+    webClientId,
+    androidClientId,
+    iosClientId,
   });
 
   useEffect(() => {
@@ -86,6 +94,15 @@ export default function LoginScreen() {
   }
 
   async function handleGoogleLogin() {
+    if (!isGoogleConfigured) {
+      Toast.show({
+        type: 'info',
+        text1: 'Google Sign-In não configurado',
+        text2: 'Configure googleWebClientId no app.json para ativar.',
+        visibilityTime: 4000,
+      });
+      return;
+    }
     setIsGoogleLoading(true);
     try {
       await promptAsync();
