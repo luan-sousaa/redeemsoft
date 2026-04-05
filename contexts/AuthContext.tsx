@@ -33,6 +33,8 @@ type AuthContextValue = AuthState & {
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
   forgotPassword: (email: string) => Promise<void>;
+  verifyCode: (email: string, code: string) => Promise<void>;
+  resetPassword: (email: string, code: string, newPassword: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -73,8 +75,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await authService.forgotPassword(email);
   }
 
+  async function verifyCode(email: string, code: string) {
+    await authService.verifyCode(email, code);
+  }
+
+  async function resetPassword(email: string, code: string, newPassword: string) {
+    await authService.resetPassword(email, code, newPassword);
+  }
+
   return (
-    <AuthContext.Provider value={{ ...state, login, loginWithGoogle, register, logout, forgotPassword }}>
+    <AuthContext.Provider value={{ ...state, login, loginWithGoogle, register, logout, forgotPassword, verifyCode, resetPassword }}>
       {children}
     </AuthContext.Provider>
   );

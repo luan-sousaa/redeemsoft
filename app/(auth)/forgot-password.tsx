@@ -48,7 +48,7 @@ export default function ForgotPasswordScreen() {
     setIsLoading(true);
     try {
       await forgotPassword(email);
-      setSent(true);
+      router.push({ pathname: '/(auth)/verify-code' as Href, params: { email } });
     } catch (e: unknown) {
       Toast.show({
         type: 'error',
