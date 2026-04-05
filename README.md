@@ -274,3 +274,13 @@ redeemsoft/
 
 **Curso:** Análise e Desenvolvimento de Sistemas
 **Disciplina:** Desenvolvimento Mobile I
+
+---
+
+## Licença
+
+Este projeto está licenciado sob a licença **MIT**. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+
+---
+
+<p align="center">Feito com 💙 por Anna Karla, Débora, Luan e Yasmin</p>
