@@ -297,7 +297,7 @@ export default function MarketplaceScreen() {
             projeto={item}
             onPress={() =>
               router.push({
-                pathname: '/(app)/projeto-detalhe' as Href,
+                pathname: '/(app)/projeto-detalhe',
                 params: {
                   id: item.id,
                   titulo: item.titulo,
@@ -307,7 +307,7 @@ export default function MarketplaceScreen() {
                   stack: item.stack,
                   modalidades: JSON.stringify(item.modalidades),
                 },
-              })
+              } as Href)
             }
           />
         )}

@@ -145,7 +145,7 @@ export default function BuscarDesenvolvedoresScreen() {
               dev={item}
               onPress={() =>
                 router.push({
-                  pathname: '/(app)/desenvolvedor-detalhe' as Href,
+                  pathname: '/(app)/desenvolvedor-detalhe',
                   params: {
                     id: item.id,
                     nome: item.nome,
@@ -156,7 +156,7 @@ export default function BuscarDesenvolvedoresScreen() {
                     certificacoes: item.certificacoes,
                     projetos: JSON.stringify(item.projetos),
                   },
-                })
+                } as Href)
               }
             />
           )}
