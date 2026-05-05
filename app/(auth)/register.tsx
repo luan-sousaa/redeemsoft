@@ -2,7 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
+  FlatList,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -24,9 +26,17 @@ type UserType = 'client' | 'developer';
 type FormErrors = {
   name?: string;
   email?: string;
+  city?: string;
+  state?: string;
   password?: string;
   confirmPassword?: string;
 };
+
+const ESTADOS_BR = [
+  'AC','AL','AP','AM','BA','CE','DF','ES','GO',
+  'MA','MT','MS','MG','PA','PB','PR','PE','PI',
+  'RJ','RN','RS','RO','RR','SC','SP','SE','TO',
+];
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -34,6 +44,9 @@ export default function RegisterScreen() {
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [stateModalVisible, setStateModalVisible] = useState(false);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [userType, setUserType] = useState<UserType>('client');
@@ -50,6 +63,9 @@ export default function RegisterScreen() {
       newErrors.name = 'Nome deve ter ao menos 2 caracteres';
     if (!email) newErrors.email = 'E-mail é obrigatório';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) newErrors.email = 'E-mail inválido';
+    if (!city.trim() || city.trim().length < 2)
+      newErrors.city = 'Cidade deve ter ao menos 2 caracteres';
+    if (!state) newErrors.state = 'Selecione um estado';
     if (!password) newErrors.password = 'Senha é obrigatória';
     else if (password.length < 8) newErrors.password = 'Senha deve ter ao menos 8 caracteres';
     if (!confirmPassword) newErrors.confirmPassword = 'Confirme sua senha';
@@ -71,7 +87,7 @@ export default function RegisterScreen() {
     }
     setIsLoading(true);
     try {
-      await register({ name: name.trim(), email, password, type: userType });
+      await register({ name: name.trim(), email, password, type: userType, city: city.trim(), state });
     } catch (e: unknown) {
       Toast.show({
         type: 'error',
@@ -129,6 +145,35 @@ export default function RegisterScreen() {
             error={e.email}
           />
 
+          <View style={styles.cityStateRow}>
+            <View style={styles.cityStateField}>
+              <Input
+                label="Cidade"
+                value={city}
+                onChangeText={setCity}
+                autoCapitalize="words"
+                placeholder="Ex: Brasília"
+                error={e.city}
+              />
+            </View>
+            <View style={styles.cityStateField}>
+              <Text style={styles.inputLabel}>Estado</Text>
+              <Pressable
+                style={[
+                  styles.stateSelector,
+                  !!e.state && styles.stateSelectorError,
+                ]}
+                onPress={() => setStateModalVisible(true)}
+              >
+                <Text style={state ? styles.stateSelectorValue : styles.stateSelectorPlaceholder}>
+                  {state || 'Ex: DF'}
+                </Text>
+                <Ionicons name="chevron-down" size={18} color={Colors.textSecondary} />
+              </Pressable>
+              {e.state && <Text style={styles.errorText}>{e.state}</Text>}
+            </View>
+          </View>
+
           <Input
             label="Senha"
             value={password}
@@ -176,9 +221,7 @@ export default function RegisterScreen() {
                 size={18}
                 color={userType === 'client' ? Colors.white : Colors.textSecondary}
               />
-              <Text
-                style={[styles.typeText, userType === 'client' && styles.typeTextSelected]}
-              >
+              <Text style={[styles.typeText, userType === 'client' && styles.typeTextSelected]}>
                 Cliente
               </Text>
             </Pressable>
@@ -191,9 +234,7 @@ export default function RegisterScreen() {
                 size={18}
                 color={userType === 'developer' ? Colors.white : Colors.textSecondary}
               />
-              <Text
-                style={[styles.typeText, userType === 'developer' && styles.typeTextSelected]}
-              >
+              <Text style={[styles.typeText, userType === 'developer' && styles.typeTextSelected]}>
                 Desenvolvedor
               </Text>
             </Pressable>
@@ -228,6 +269,45 @@ export default function RegisterScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Modal de seleção de estado */}
+      <Modal
+        visible={stateModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setStateModalVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setStateModalVisible(false)}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Selecione o Estado</Text>
+              <Pressable onPress={() => setStateModalVisible(false)}>
+                <Ionicons name="close" size={22} color={Colors.text} />
+              </Pressable>
+            </View>
+            <FlatList
+              data={ESTADOS_BR}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <Pressable
+                  style={[styles.modalItem, state === item && styles.modalItemSelected]}
+                  onPress={() => {
+                    setState(item);
+                    setStateModalVisible(false);
+                  }}
+                >
+                  <Text style={[styles.modalItemText, state === item && styles.modalItemTextSelected]}>
+                    {item}
+                  </Text>
+                  {state === item && (
+                    <Ionicons name="checkmark" size={18} color={Colors.primary} />
+                  )}
+                </Pressable>
+              )}
+            />
+          </View>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -271,6 +351,92 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
     marginBottom: 28,
+  },
+  cityStateRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  cityStateField: {
+    flex: 1,
+  },
+  inputLabel: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    fontWeight: '500',
+    marginBottom: 6,
+  },
+  stateSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 52,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+    marginBottom: 16,
+  },
+  stateSelectorError: {
+    borderColor: Colors.error ?? '#e53e3e',
+  },
+  stateSelectorValue: {
+    fontSize: 15,
+    color: Colors.text,
+  },
+  stateSelectorPlaceholder: {
+    fontSize: 15,
+    color: Colors.textSecondary,
+  },
+  errorText: {
+    fontSize: 12,
+    color: Colors.error ?? '#e53e3e',
+    marginTop: -12,
+    marginBottom: 12,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '60%',
+    paddingBottom: 24,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.text,
+  },
+  modalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+  },
+  modalItemSelected: {
+    backgroundColor: Colors.surface,
+  },
+  modalItemText: {
+    fontSize: 15,
+    color: Colors.text,
+  },
+  modalItemTextSelected: {
+    color: Colors.primary,
+    fontWeight: '600',
   },
   typeLabel: {
     fontSize: 13,
