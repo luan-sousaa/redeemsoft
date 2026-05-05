@@ -10,6 +10,8 @@ export type RegisterData = {
   email: string;
   password: string;
   type: 'client' | 'developer';
+  city: string;   
+  state: string;
 };
 
 export type Candidato = {
