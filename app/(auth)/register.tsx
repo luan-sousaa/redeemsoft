@@ -293,6 +293,7 @@ export default function RegisterScreen() {
                   style={[styles.modalItem, state === item && styles.modalItemSelected]}
                   onPress={() => {
                     setState(item);
+                    setErrors((prev) => ({ ...prev, state: undefined }));
                     setStateModalVisible(false);
                   }}
                 >
