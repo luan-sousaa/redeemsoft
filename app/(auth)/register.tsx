@@ -278,7 +278,7 @@ export default function RegisterScreen() {
         onRequestClose={() => setStateModalVisible(false)}
       >
         <Pressable style={styles.modalOverlay} onPress={() => setStateModalVisible(false)}>
-          <View style={styles.modalSheet}>
+          <View style={styles.modalSheet} onStartShouldSetResponder={() => true}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Selecione o Estado</Text>
               <Pressable onPress={() => setStateModalVisible(false)}>
