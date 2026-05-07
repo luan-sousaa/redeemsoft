@@ -5,6 +5,7 @@ import React from 'react';
 import {
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableWithoutFeedback,
@@ -190,11 +191,14 @@ export function DrawerMenu({
           </Pressable>
 
           {/* Navegação */}
-          <View style={styles.drawerNav}>
+          <ScrollView
+            style={styles.drawerNav}
+            showsVerticalScrollIndicator={false}
+          >
             {items.map((item) => (
               <NavItem key={item.label} item={item} />
             ))}
-          </View>
+          </ScrollView>
 
           {/* Sair no rodapé */}
           <Pressable
