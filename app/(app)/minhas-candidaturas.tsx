@@ -139,7 +139,7 @@ export default function MinhasCandidaturasScreen() {
       ) : (
         <FlatList
           data={candidaturas}
-          keyExtractor={(item) => item.projetoId}
+          keyExtractor={(item) => item.candidaturaId}
           contentContainerStyle={styles.lista}
           showsVerticalScrollIndicator={false}
           ItemSeparatorComponent={() => <View style={{ height: 12 }} />}

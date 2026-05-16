@@ -10,14 +10,15 @@ export type RegisterData = {
   email: string;
   password: string;
   type: 'client' | 'developer';
-  city: string;   
+  city: string;
   state: string;
 };
 
-export type Candidato = {
+// Candidatura: aplicação de um Desenvolvedor a um ProjetoEmpresa.
+// Não duplica nome/email — referencia o Desenvolvedor pelo id.
+export type Candidatura = {
   id: string;
-  nome: string;
-  email: string;
+  desenvolvedorId: string;
   experiencia: string;
   proposta: number;
   prazo: string;
@@ -33,7 +34,7 @@ export type ProjetoEmpresa = {
   modalidades: string[];
   stack: string;
   status: 'ativo' | 'em_andamento' | 'concluido';
-  candidatos: Candidato[];
+  candidaturas: Candidatura[];
   dataCriacao: Date;
 };
 
@@ -50,6 +51,7 @@ export type NovoProjeto = {
 
 export type Desenvolvedor = {
   id: string;
+  userId: string; // referência ao User autenticado
   nome: string;
   precoPorHora: number;
   descricao: string;
@@ -62,6 +64,7 @@ export type Desenvolvedor = {
 export const DESENVOLVEDORES_MOCK: Desenvolvedor[] = [
   {
     id: 'd1',
+    userId: 'ext-d1',
     nome: 'Carlos Mendes',
     precoPorHora: 120,
     descricao: 'Especialista em migração de sistemas legados Delphi e COBOL',
@@ -72,6 +75,7 @@ export const DESENVOLVEDORES_MOCK: Desenvolvedor[] = [
   },
   {
     id: 'd2',
+    userId: '2', // corresponde ao dev@redeemsoft.com (User.id = '2')
     nome: 'Ana Souza',
     precoPorHora: 95,
     descricao: 'Full-stack com foco em React Native e Node.js',
@@ -82,6 +86,7 @@ export const DESENVOLVEDORES_MOCK: Desenvolvedor[] = [
   },
   {
     id: 'd3',
+    userId: 'ext-d3',
     nome: 'Rafael Lima',
     precoPorHora: 85,
     descricao: 'Especialista PHP legacy e modernização de portais web',
@@ -92,6 +97,7 @@ export const DESENVOLVEDORES_MOCK: Desenvolvedor[] = [
   },
   {
     id: 'd4',
+    userId: 'ext-d4',
     nome: 'Juliana Costa',
     precoPorHora: 110,
     descricao: 'Dev mobile especializada em React Native e integrações',
@@ -102,6 +108,7 @@ export const DESENVOLVEDORES_MOCK: Desenvolvedor[] = [
   },
   {
     id: 'd5',
+    userId: 'ext-d5',
     nome: 'Marcos Oliveira',
     precoPorHora: 130,
     descricao: 'Arquiteto de software e especialista em sistemas distribuídos',
@@ -112,7 +119,8 @@ export const DESENVOLVEDORES_MOCK: Desenvolvedor[] = [
   },
 ];
 
-// Mock de projetos da empresa
+// ─── Mock de projetos da empresa ──────────────────────────────────────────────
+
 const PROJETOS_EMPRESA_MOCK: ProjetoEmpresa[] = [
   {
     id: 'e1',
@@ -123,10 +131,10 @@ const PROJETOS_EMPRESA_MOCK: ProjetoEmpresa[] = [
     modalidades: ['SP', 'H'],
     stack: 'Delphi → Node.js + React',
     status: 'ativo',
-    candidatos: [
-      { id: 'c1', nome: 'Carlos Mendes', email: 'carlos@dev.com', experiencia: '8 anos em migração de sistemas legados', proposta: 16500, prazo: '55 dias', status: 'pendente' },
-      { id: 'c2', nome: 'Ana Souza', email: 'ana@dev.com', experiencia: '5 anos com Node.js e React', proposta: 17800, prazo: '60 dias', status: 'aceito' },
-      { id: 'c3', nome: 'Rafael Lima', email: 'rafael@dev.com', experiencia: '6 anos, especialista em Delphi', proposta: 15000, prazo: '70 dias', status: 'recusado' },
+    candidaturas: [
+      { id: 'c1', desenvolvedorId: 'd1', experiencia: '8 anos em migração de sistemas legados', proposta: 16500, prazo: '55 dias', status: 'pendente' },
+      { id: 'c2', desenvolvedorId: 'd2', experiencia: '5 anos com Node.js e React', proposta: 17800, prazo: '60 dias', status: 'aceito' },
+      { id: 'c3', desenvolvedorId: 'd3', experiencia: '6 anos, especialista em Delphi', proposta: 15000, prazo: '70 dias', status: 'recusado' },
     ],
     dataCriacao: new Date('2025-03-15'),
   },
@@ -139,8 +147,8 @@ const PROJETOS_EMPRESA_MOCK: ProjetoEmpresa[] = [
     modalidades: ['H'],
     stack: 'React Native',
     status: 'em_andamento',
-    candidatos: [
-      { id: 'c4', nome: 'Juliana Costa', email: 'ju@dev.com', experiencia: '4 anos em React Native', proposta: 4200, prazo: '12 dias', status: 'aceito' },
+    candidaturas: [
+      { id: 'c4', desenvolvedorId: 'd4', experiencia: '4 anos em React Native', proposta: 4200, prazo: '12 dias', status: 'aceito' },
     ],
     dataCriacao: new Date('2025-03-28'),
   },
@@ -153,7 +161,7 @@ const PROJETOS_EMPRESA_MOCK: ProjetoEmpresa[] = [
     modalidades: ['P', 'SP', 'H'],
     stack: 'PHP 5.6 → Laravel + Vue',
     status: 'ativo',
-    candidatos: [],
+    candidaturas: [],
     dataCriacao: new Date('2025-04-01'),
   },
 ];
@@ -161,6 +169,7 @@ const PROJETOS_EMPRESA_MOCK: ProjetoEmpresa[] = [
 // ─── Store de candidaturas do desenvolvedor ───────────────────────────────────
 
 export type MinhaCandidatura = {
+  candidaturaId: string; // referência à Candidatura no ProjetoEmpresa
   projetoId: string;
   titulo: string;
   stack: string;
@@ -188,7 +197,6 @@ export const authService = {
 
   async loginWithGoogle(token: string): Promise<User> {
     await delay(800);
-    // Mock: any token succeeds in development
     void token;
     return { id: 'g-1', email: 'google@redeemsoft.com', name: 'Usuário Google', type: 'client' };
   },
@@ -201,13 +209,11 @@ export const authService = {
   async forgotPassword(email: string): Promise<void> {
     await delay(1000);
     void email;
-    // Mock: always succeeds
   },
 
   async verifyCode(email: string, code: string): Promise<void> {
     await delay(800);
     void email;
-    // Mock: code "1234" always succeeds in development
     if (code !== '1234') {
       throw new Error('Código inválido ou expirado. Tente novamente.');
     }
@@ -218,7 +224,6 @@ export const authService = {
     void email;
     void code;
     void newPassword;
-    // Mock: always succeeds
   },
 
   // ─── Candidaturas do desenvolvedor ─────────────────────────────────────────
@@ -227,13 +232,29 @@ export const authService = {
     return MINHAS_CANDIDATURAS.some((c) => c.projetoId === projetoId);
   },
 
-  async candidatar(candidatura: Omit<MinhaCandidatura, 'status' | 'dataEnvio'>): Promise<void> {
+  async candidatar(data: Omit<MinhaCandidatura, 'status' | 'dataEnvio' | 'candidaturaId'>): Promise<void> {
     await delay(800);
-    if (this.jaCandidatou(candidatura.projetoId)) {
+    if (this.jaCandidatou(data.projetoId)) {
       throw new Error('Você já se candidatou a este projeto.');
     }
+    const candidaturaId = `c${Date.now()}`;
+
+    // Adiciona à lista de candidaturas do projeto (usando dev d2 = dev@redeemsoft.com)
+    const projeto = PROJETOS_EMPRESA_MOCK.find((p) => p.id === data.projetoId);
+    if (projeto) {
+      projeto.candidaturas.unshift({
+        id: candidaturaId,
+        desenvolvedorId: 'd2',
+        experiencia: '',
+        proposta: data.preco,
+        prazo: data.prazo,
+        status: 'pendente',
+      });
+    }
+
     MINHAS_CANDIDATURAS.unshift({
-      ...candidatura,
+      ...data,
+      candidaturaId,
       status: 'pendente',
       dataEnvio: new Date(),
     });
@@ -257,22 +278,22 @@ export const authService = {
       id: `e${Date.now()}`,
       ...data,
       status: 'ativo',
-      candidatos: [],
+      candidaturas: [],
       dataCriacao: new Date(),
     };
     PROJETOS_EMPRESA_MOCK.unshift(novo);
     return novo;
   },
 
-  async atualizarStatusCandidato(
+  async atualizarStatusCandidatura(
     projetoId: string,
-    candidatoId: string,
+    candidaturaId: string,
     status: 'aceito' | 'recusado'
   ): Promise<void> {
     await delay(500);
     const projeto = PROJETOS_EMPRESA_MOCK.find((p) => p.id === projetoId);
     if (projeto) {
-      const cand = projeto.candidatos.find((c) => c.id === candidatoId);
+      const cand = projeto.candidaturas.find((c) => c.id === candidaturaId);
       if (cand) cand.status = status;
     }
   },
@@ -284,9 +305,11 @@ export const authService = {
     return DESENVOLVEDORES_MOCK;
   },
 
+  getDesenvolvedorById(id: string): Desenvolvedor | undefined {
+    return DESENVOLVEDORES_MOCK.find((d) => d.id === id);
+  },
+
   async getStoredUser(): Promise<User | null> {
-    // MVP: no persistence — session resets on app restart
-    // Future: read from SecureStore/AsyncStorage
     return null;
   },
 };

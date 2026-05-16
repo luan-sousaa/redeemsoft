@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
 import { Colors } from '@/constants/colors';
-import { authService, type Candidato, type ProjetoEmpresa } from '@/services/authService';
+import { authService, type Candidatura, type Desenvolvedor, type ProjetoEmpresa } from '@/services/authService';
 
 // ─── Status labels ─────────────────────────────────────────────────────────────
 
@@ -36,23 +36,28 @@ const CAND_STATUS_CONFIG = {
 
 function CandidatosModal({
   projeto,
+  desenvolvedores,
   onClose,
   onUpdate,
 }: {
   projeto: ProjetoEmpresa;
+  desenvolvedores: Desenvolvedor[];
   onClose: () => void;
   onUpdate: () => void;
 }) {
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
-  async function handleStatus(cand: Candidato, status: 'aceito' | 'recusado') {
+  const devMap = Object.fromEntries(desenvolvedores.map((d) => [d.id, d]));
+
+  async function handleStatus(cand: Candidatura, status: 'aceito' | 'recusado') {
     setLoadingId(cand.id);
+    const dev = devMap[cand.desenvolvedorId];
     try {
-      await authService.atualizarStatusCandidato(projeto.id, cand.id, status);
+      await authService.atualizarStatusCandidatura(projeto.id, cand.id, status);
       Toast.show({
         type: 'success',
         text1: status === 'aceito' ? 'Candidato aceito!' : 'Candidato recusado',
-        text2: `${cand.nome} foi ${status === 'aceito' ? 'aceito' : 'recusado'} com sucesso.`,
+        text2: `${dev?.nome ?? 'Desenvolvedor'} foi ${status === 'aceito' ? 'aceito' : 'recusado'} com sucesso.`,
       });
       onUpdate();
     } catch {
@@ -75,10 +80,10 @@ function CandidatosModal({
         </View>
 
         <Text style={modal.subtitle}>
-          {projeto.candidatos.length} candidato{projeto.candidatos.length !== 1 ? 's' : ''}
+          {projeto.candidaturas.length} candidato{projeto.candidaturas.length !== 1 ? 's' : ''}
         </Text>
 
-        {projeto.candidatos.length === 0 ? (
+        {projeto.candidaturas.length === 0 ? (
           <View style={modal.empty}>
             <Ionicons name="people-outline" size={52} color={Colors.surfaceHighlight} />
             <Text style={modal.emptyText}>Nenhum candidato ainda</Text>
@@ -86,19 +91,20 @@ function CandidatosModal({
           </View>
         ) : (
           <ScrollView contentContainerStyle={modal.list} showsVerticalScrollIndicator={false}>
-            {projeto.candidatos.map((cand) => {
+            {projeto.candidaturas.map((cand) => {
               const cfg = CAND_STATUS_CONFIG[cand.status];
               const isLoading = loadingId === cand.id;
+              const dev = devMap[cand.desenvolvedorId];
               return (
                 <View key={cand.id} style={modal.card}>
                   {/* Cabeçalho do candidato */}
                   <View style={modal.cardHeader}>
                     <View style={modal.avatar}>
-                      <Text style={modal.avatarLetter}>{cand.nome.charAt(0)}</Text>
+                      <Text style={modal.avatarLetter}>{dev?.nome.charAt(0) ?? '?'}</Text>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={modal.candName}>{cand.nome}</Text>
-                      <Text style={modal.candEmail}>{cand.email}</Text>
+                      <Text style={modal.candName}>{dev?.nome ?? 'Desconhecido'}</Text>
+                      <Text style={modal.candEmail}>{dev?.descricao ?? ''}</Text>
                     </View>
                     <View style={[modal.statusBadge, { backgroundColor: cfg.bg }]}>
                       <Text style={[modal.statusText, { color: cfg.color }]}>{cfg.label}</Text>
@@ -166,7 +172,7 @@ function ProjetoCard({
   onVerCandidatos: () => void;
 }) {
   const cfg = STATUS_CONFIG[projeto.status];
-  const pendentes = projeto.candidatos.filter((c) => c.status === 'pendente').length;
+  const pendentes = projeto.candidaturas.filter((c) => c.status === 'pendente').length;
 
   return (
     <View style={styles.card}>
@@ -204,7 +210,7 @@ function ProjetoCard({
           )}
           <Ionicons name="people-outline" size={16} color={Colors.primary} />
           <Text style={styles.candBtnText}>
-            {projeto.candidatos.length} candidato{projeto.candidatos.length !== 1 ? 's' : ''}
+            {projeto.candidaturas.length} candidato{projeto.candidaturas.length !== 1 ? 's' : ''}
           </Text>
         </Pressable>
       </View>
@@ -217,13 +223,18 @@ function ProjetoCard({
 export default function MeusProjetosScreen() {
   const router = useRouter();
   const [projetos, setProjetos] = useState<ProjetoEmpresa[]>([]);
+  const [desenvolvedores, setDesenvolvedores] = useState<Desenvolvedor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [projetoSelecionado, setProjetoSelecionado] = useState<ProjetoEmpresa | null>(null);
 
   const carregar = useCallback(async () => {
     try {
-      const data = await authService.getProjetosEmpresa();
+      const [data, devs] = await Promise.all([
+        authService.getProjetosEmpresa(),
+        authService.getDesenvolvedores(),
+      ]);
       setProjetos(data);
+      setDesenvolvedores(devs);
     } catch {
       Toast.show({ type: 'error', text1: 'Erro ao carregar projetos' });
     } finally {
@@ -234,7 +245,7 @@ export default function MeusProjetosScreen() {
   useEffect(() => { carregar(); }, [carregar]);
 
   const totalCandPendentes = projetos.reduce(
-    (acc, p) => acc + p.candidatos.filter((c) => c.status === 'pendente').length,
+    (acc, p) => acc + p.candidaturas.filter((c) => c.status === 'pendente').length,
     0
   );
 
@@ -297,6 +308,7 @@ export default function MeusProjetosScreen() {
       {projetoSelecionado && (
         <CandidatosModal
           projeto={projetoSelecionado}
+          desenvolvedores={desenvolvedores}
           onClose={() => setProjetoSelecionado(null)}
           onUpdate={() => { carregar(); setProjetoSelecionado(null); }}
         />
