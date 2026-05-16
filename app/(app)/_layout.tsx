@@ -13,6 +13,7 @@ export default function AppLayout() {
       <Stack.Screen name="minhas-candidaturas" />
       <Stack.Screen name="buscar-desenvolvedores" />
       <Stack.Screen name="desenvolvedor-detalhe" />
+      <Stack.Screen name="chat-conversa" />
     </Stack>
   );
 }
