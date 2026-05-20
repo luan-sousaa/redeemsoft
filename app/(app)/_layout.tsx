@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { AuthProvider } from '@/contexts/AuthContext';
 import { Stack } from 'expo-router';
 import React from 'react';
@@ -7,10 +8,15 @@ export default function AppLayout() {
   return (
 
 =======
+=======
+>>>>>>> 4c2393a725ff9ad656ee1181d1b82f594cd3dc4d
 import { Stack } from 'expo-router';
 
 export default function AppLayout() {
   return (
+<<<<<<< HEAD
+>>>>>>> 4c2393a725ff9ad656ee1181d1b82f594cd3dc4d
+=======
 >>>>>>> 4c2393a725ff9ad656ee1181d1b82f594cd3dc4d
     <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
       <Stack.Screen name="index" />

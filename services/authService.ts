@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 import axios from 'axios';
 
 export type User = {
@@ -53,6 +54,8 @@ export const authService = {
   resetPassword: async (email: string, code: string, newPassword: string) => { throw new Error('Não implementado'); }
 };
 =======
+=======
+>>>>>>> 4c2393a725ff9ad656ee1181d1b82f594cd3dc4d
 export type User = {
   id: string;
   email: string;
@@ -368,4 +371,7 @@ export const authService = {
     return null;
   },
 };
+<<<<<<< HEAD
+>>>>>>> 4c2393a725ff9ad656ee1181d1b82f594cd3dc4d
+=======
 >>>>>>> 4c2393a725ff9ad656ee1181d1b82f594cd3dc4d

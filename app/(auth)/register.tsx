@@ -39,7 +39,10 @@ const ESTADOS_BR = [
 ];
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 
+=======
+>>>>>>> 4c2393a725ff9ad656ee1181d1b82f594cd3dc4d
 =======
 >>>>>>> 4c2393a725ff9ad656ee1181d1b82f594cd3dc4d
 export default function RegisterScreen() {
@@ -92,7 +95,11 @@ export default function RegisterScreen() {
     setIsLoading(true);
     try {
 <<<<<<< HEAD
+<<<<<<< HEAD
       await register({ nome: name.trim(), email, senha:password, type: userType, cidade: city.trim(), estado: state });
+=======
+      await register({ name: name.trim(), email, password, type: userType, city: city.trim(), state });
+>>>>>>> 4c2393a725ff9ad656ee1181d1b82f594cd3dc4d
 =======
       await register({ name: name.trim(), email, password, type: userType, city: city.trim(), state });
 >>>>>>> 4c2393a725ff9ad656ee1181d1b82f594cd3dc4d

@@ -101,7 +101,6 @@ export default function CriarProjetoScreen() {
   const e = hasSubmitted ? errors : {};
 
   return (
-
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView
         style={styles.flex}
