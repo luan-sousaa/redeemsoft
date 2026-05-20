@@ -92,12 +92,17 @@ export function DrawerMenu({
       onPress: () => { onClose(); router.push('/(app)/minhas-candidaturas' as Href); },
       active: activeScreen === 'minhas-candidaturas',
     },
+
     {
       icon: 'notifications-outline',
       label: 'Notificações',
-      onPress: () => { onClose(); },
+      onPress: () => {
+        onClose();
+        router.push('/(app)/notificacoes');
+      },
       active: activeScreen === 'notificacoes',
     },
+    
     {
       icon: 'settings-outline',
       label: 'Configurações',
@@ -144,11 +149,16 @@ export function DrawerMenu({
       active: activeScreen === 'criar-projeto',
     },
     {
-      icon: 'notifications-outline',
-      label: 'Notificações',
-      onPress: () => { onClose(); },
-      active: activeScreen === 'notificacoes',
+    icon: 'notifications-outline',
+    label: 'Notificações',
+    onPress: () => {
+      onClose();
+      router.push('/(app)/notificacoes');
     },
+    active: activeScreen === 'notificacoes',
+    },
+    
+    
     {
       icon: 'settings-outline',
       label: 'Configurações',
