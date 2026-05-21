@@ -38,13 +38,7 @@ const ESTADOS_BR = [
   'RJ','RN','RS','RO','RR','SC','SP','SE','TO',
 ];
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 
-=======
->>>>>>> 4c2393a725ff9ad656ee1181d1b82f594cd3dc4d
-=======
->>>>>>> 4c2393a725ff9ad656ee1181d1b82f594cd3dc4d
 export default function RegisterScreen() {
   const router = useRouter();
   const { register } = useAuth();
@@ -94,15 +88,7 @@ export default function RegisterScreen() {
     }
     setIsLoading(true);
     try {
-<<<<<<< HEAD
-<<<<<<< HEAD
       await register({ nome: name.trim(), email, senha:password, type: userType, cidade: city.trim(), estado: state });
-=======
-      await register({ name: name.trim(), email, password, type: userType, city: city.trim(), state });
->>>>>>> 4c2393a725ff9ad656ee1181d1b82f594cd3dc4d
-=======
-      await register({ name: name.trim(), email, password, type: userType, city: city.trim(), state });
->>>>>>> 4c2393a725ff9ad656ee1181d1b82f594cd3dc4d
     } catch (e: unknown) {
       Toast.show({
         type: 'error',
