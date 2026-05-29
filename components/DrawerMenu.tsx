@@ -92,10 +92,14 @@ export function DrawerMenu({
       onPress: () => { onClose(); router.push('/(app)/minhas-candidaturas' as Href); },
       active: activeScreen === 'minhas-candidaturas',
     },
+
     {
       icon: 'notifications-outline',
       label: 'Notificações',
-      onPress: () => { onClose(); },
+      onPress: () => {
+        onClose();
+        router.push('/(app)/notificacoes' as Href);
+      },
       active: activeScreen === 'notificacoes',
     },
     {
@@ -146,7 +150,10 @@ export function DrawerMenu({
     {
       icon: 'notifications-outline',
       label: 'Notificações',
-      onPress: () => { onClose(); },
+      onPress: () => {
+        onClose();
+        router.push('/(app)/notificacoes' as Href);
+      },
       active: activeScreen === 'notificacoes',
     },
     {
