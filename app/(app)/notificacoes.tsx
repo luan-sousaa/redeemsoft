@@ -11,18 +11,15 @@ export default function NotificacoesScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const isDev = user?.type === 'developer';
+  const [dismissed, setDismissed] = useState(false);
 
-  const [notification, setNotification] = useState({
-    title: isDev
-      ? 'Projeto atualizado'
-      : 'Novo candidato interessado',
-
+  const notification = {
+    title: isDev ? 'Projeto atualizado' : 'Novo candidato interessado',
     message: isDev
       ? 'Uma empresa atualizou o status da sua candidatura.'
       : 'Um desenvolvedor demonstrou interesse no seu projeto.',
-
     time: 'Agora',
-  });
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -45,7 +42,7 @@ export default function NotificacoesScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      {!notification ? (
+      {dismissed ? (
         <View style={styles.emptyContainer}>
           <Ionicons
             name="notifications-off-outline"
@@ -86,7 +83,7 @@ export default function NotificacoesScreen() {
           </View>
 
           <Pressable
-            onPress={() => setNotification(null as any)}
+            onPress={() => setDismissed(true)}
             style={styles.deleteButton}
           >
             <Ionicons

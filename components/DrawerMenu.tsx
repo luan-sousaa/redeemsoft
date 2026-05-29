@@ -98,11 +98,10 @@ export function DrawerMenu({
       label: 'Notificações',
       onPress: () => {
         onClose();
-        router.push('/(app)/notificacoes');
+        router.push('/(app)/notificacoes' as Href);
       },
       active: activeScreen === 'notificacoes',
     },
-    
     {
       icon: 'settings-outline',
       label: 'Configurações',
@@ -149,16 +148,14 @@ export function DrawerMenu({
       active: activeScreen === 'criar-projeto',
     },
     {
-    icon: 'notifications-outline',
-    label: 'Notificações',
-    onPress: () => {
-      onClose();
-      router.push('/(app)/notificacoes');
+      icon: 'notifications-outline',
+      label: 'Notificações',
+      onPress: () => {
+        onClose();
+        router.push('/(app)/notificacoes' as Href);
+      },
+      active: activeScreen === 'notificacoes',
     },
-    active: activeScreen === 'notificacoes',
-    },
-    
-    
     {
       icon: 'settings-outline',
       label: 'Configurações',
