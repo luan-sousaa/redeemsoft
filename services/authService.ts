@@ -12,6 +12,7 @@ export type RegisterData = {
   type: 'client' | 'developer';
   city: string;
   state: string;
+  cpfCnpj: string;
 };
 
 // Candidatura: aplicação de um Desenvolvedor a um ProjetoEmpresa.
