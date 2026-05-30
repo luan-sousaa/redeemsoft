@@ -1,4 +1,5 @@
-const BASE_URL = 'http://localhost:3333';
+const BASE_URL = 'https://api.abacatepay.com/v2';
+const API_KEY = 'abc_dev_XZKJm2xEmtSbCnqfdaEwbqaJ'; // sandbox only
 
 export type PixPayment = {
   id: string;
@@ -8,30 +9,44 @@ export type PixPayment = {
   status: string;
 };
 
-async function request<T>(path: string, options: RequestInit): Promise<T> {
+type AbacateResponse<T> = { success: boolean; data: T | null; error: string | null };
+
+async function abacateRequest<T>(path: string, options: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
-    headers: { 'Content-Type': 'application/json', ...(options.headers ?? {}) },
+    headers: {
+      'Authorization': `Bearer ${API_KEY}`,
+      'Content-Type': 'application/json',
+      ...(options.headers ?? {}),
+    },
   });
 
-  const json = await res.json() as T & { error?: string };
+  const json = await res.json() as AbacateResponse<T>;
 
-  if (!res.ok) {
-    throw new Error((json as { error?: string }).error ?? `Erro ${res.status}`);
+  if (!json.success || !json.data) {
+    throw new Error(json.error ?? `Erro ${res.status}`);
   }
 
-  return json;
+  return json.data;
 }
 
 export const paymentService = {
-  createPixPayment(amount: number, description?: string): Promise<PixPayment> {
-    return request<PixPayment>('/payments/create', {
+  async createPixPayment(amount: number, description?: string): Promise<PixPayment> {
+    return abacateRequest<PixPayment>('/transparents/create', {
       method: 'POST',
-      body: JSON.stringify({ amount, description }),
+      body: JSON.stringify({
+        method: 'PIX',
+        data: { amount, ...(description && { description }) },
+      }),
     });
   },
 
-  simulatePayment(id: string): Promise<void> {
-    return request<void>(`/payments/${id}/simulate`, { method: 'POST' });
+  async simulatePayment(id: string): Promise<void> {
+    const res = await fetch(`${BASE_URL}/transparents/simulate-payment?id=${id}`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${API_KEY}` },
+    });
+    const json = await res.json() as AbacateResponse<unknown>;
+    if (!json.success) throw new Error(json.error ?? 'Erro ao simular pagamento');
   },
 };

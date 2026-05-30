@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/Button';
 
 export default function CheckoutScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ amount?: string; description?: string }>();
+  const params = useLocalSearchParams<{ amount?: string; description?: string; projetoId?: string; candidaturaId?: string }>();
   const [isLoading, setIsLoading] = useState(false);
 
   // amount em centavos — padrão R$ 100,00 para teste
@@ -34,6 +34,8 @@ export default function CheckoutScreen() {
           brCode: payment.brCode,
           brCodeBase64: payment.brCodeBase64,
           expiresAt: payment.expiresAt,
+          ...(params.projetoId && { projetoId: params.projetoId }),
+          ...(params.candidaturaId && { candidaturaId: params.candidaturaId }),
         },
       });
     } catch (err) {
@@ -58,31 +60,35 @@ export default function CheckoutScreen() {
       </View>
 
       <View style={styles.body}>
-        <View style={styles.card}>
-          <View style={styles.iconWrap}>
-            <Ionicons name="pricetag-outline" size={32} color={Colors.primary} />
+        <View style={styles.content}>
+          <View style={styles.card}>
+            <View style={styles.iconWrap}>
+              <Ionicons name="pricetag-outline" size={32} color={Colors.primary} />
+            </View>
+            <Text style={styles.label}>Total a pagar</Text>
+            <Text style={styles.amount}>{amountFormatted}</Text>
+            <Text style={styles.desc} numberOfLines={2}>{description}</Text>
           </View>
-          <Text style={styles.label}>Total a pagar</Text>
-          <Text style={styles.amount}>{amountFormatted}</Text>
-          <Text style={styles.desc}>{description}</Text>
+
+          <View style={styles.pixInfo}>
+            <Ionicons name="qr-code-outline" size={20} color={Colors.primary} />
+            <Text style={styles.pixText}>
+              Pague via PIX — o QR Code expira em 1 hora
+            </Text>
+          </View>
         </View>
 
-        <View style={styles.pixInfo}>
-          <Ionicons name="qr-code-outline" size={20} color={Colors.primary} />
-          <Text style={styles.pixText}>
-            Pague via PIX — o QR Code expira em 1 hora
-          </Text>
+        <View style={styles.footer}>
+          {isLoading ? (
+            <ActivityIndicator color={Colors.primary} />
+          ) : (
+            <Button
+              title="Gerar QR Code PIX"
+              onPress={handleGerarPix}
+              style={styles.button}
+            />
+          )}
         </View>
-
-        {isLoading ? (
-          <ActivityIndicator color={Colors.primary} style={{ marginTop: 32 }} />
-        ) : (
-          <Button
-            title="Gerar QR Code PIX"
-            onPress={handleGerarPix}
-            style={styles.button}
-          />
-        )}
       </View>
     </SafeAreaView>
   );
@@ -118,6 +124,13 @@ const styles = StyleSheet.create({
   },
   body: {
     flex: 1,
+    justifyContent: 'space-between',
+  },
+  content: {
+    flex: 1,
+  },
+  footer: {
+    paddingBottom: 16,
   },
   card: {
     backgroundColor: Colors.surface,
@@ -138,7 +151,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   label: {
-    fontSize: 14,
+    fontSize: 10,
     color: Colors.textSecondary,
     marginBottom: 8,
   },
@@ -162,7 +175,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     padding: 14,
-    marginBottom: 32,
+    marginBottom: 16,
   },
   pixText: {
     flex: 1,

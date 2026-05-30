@@ -45,19 +45,20 @@ function CandidatosModal({
   onClose: () => void;
   onUpdate: () => void;
 }) {
+  const router = useRouter();
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   const devMap = Object.fromEntries(desenvolvedores.map((d) => [d.id, d]));
 
-  async function handleStatus(cand: Candidatura, status: 'aceito' | 'recusado') {
+  async function handleRecusar(cand: Candidatura) {
     setLoadingId(cand.id);
     const dev = devMap[cand.desenvolvedorId];
     try {
-      await authService.atualizarStatusCandidatura(projeto.id, cand.id, status);
+      await authService.atualizarStatusCandidatura(projeto.id, cand.id, 'recusado');
       Toast.show({
         type: 'success',
-        text1: status === 'aceito' ? 'Candidato aceito!' : 'Candidato recusado',
-        text2: `${dev?.nome ?? 'Desenvolvedor'} foi ${status === 'aceito' ? 'aceito' : 'recusado'} com sucesso.`,
+        text1: 'Candidato recusado',
+        text2: `${dev?.nome ?? 'Desenvolvedor'} foi recusado.`,
       });
       onUpdate();
     } catch {
@@ -65,6 +66,20 @@ function CandidatosModal({
     } finally {
       setLoadingId(null);
     }
+  }
+
+  function handleContratar(cand: Candidatura) {
+    const dev = devMap[cand.desenvolvedorId];
+    onClose();
+    router.push({
+      pathname: '/(app)/checkout',
+      params: {
+        amount: String(cand.proposta * 100),
+        description: `Contratar ${dev?.nome ?? 'desenvolvedor'} — ${projeto.titulo}`,
+        projetoId: projeto.id,
+        candidaturaId: cand.id,
+      },
+    });
   }
 
   return (
@@ -102,28 +117,28 @@ function CandidatosModal({
                     <View style={modal.avatar}>
                       <Text style={modal.avatarLetter}>{dev?.nome.charAt(0) ?? '?'}</Text>
                     </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={modal.candName}>{dev?.nome ?? 'Desconhecido'}</Text>
-                      <Text style={modal.candEmail}>{dev?.descricao ?? ''}</Text>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={modal.candName} numberOfLines={1}>{dev?.nome ?? 'Desconhecido'}</Text>
+                      <Text style={modal.candEmail} numberOfLines={1}>{dev?.descricao ?? ''}</Text>
                     </View>
-                    <View style={[modal.statusBadge, { backgroundColor: cfg.bg }]}>
+                    <View style={[modal.statusBadge, { backgroundColor: cfg.bg, flexShrink: 0 }]}>
                       <Text style={[modal.statusText, { color: cfg.color }]}>{cfg.label}</Text>
                     </View>
                   </View>
 
                   {/* Detalhes */}
-                  <Text style={modal.experiencia}>{cand.experiencia}</Text>
+                  <Text style={modal.experiencia} numberOfLines={2}>{cand.experiencia}</Text>
 
                   <View style={modal.detailsRow}>
                     <View style={modal.detail}>
                       <Ionicons name="cash-outline" size={14} color={Colors.primary} />
-                      <Text style={modal.detailText}>
+                      <Text style={modal.detailText} numberOfLines={1}>
                         {cand.proposta.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
                       </Text>
                     </View>
                     <View style={modal.detail}>
                       <Ionicons name="time-outline" size={14} color={Colors.primary} />
-                      <Text style={modal.detailText}>{cand.prazo}</Text>
+                      <Text style={modal.detailText} numberOfLines={1}>{cand.prazo}</Text>
                     </View>
                   </View>
 
@@ -135,18 +150,18 @@ function CandidatosModal({
                       ) : (
                         <>
                           <Pressable
+                            style={[modal.actionBtn, modal.actionAceitar]}
+                            onPress={() => handleContratar(cand)}
+                          >
+                            <Ionicons name="card-outline" size={16} color={Colors.text} />
+                            <Text style={modal.actionText}>Pagar e Contratar</Text>
+                          </Pressable>
+                          <Pressable
                             style={[modal.actionBtn, modal.actionRecusar]}
-                            onPress={() => handleStatus(cand, 'recusado')}
+                            onPress={() => handleRecusar(cand)}
                           >
                             <Ionicons name="close" size={16} color={Colors.error} />
                             <Text style={[modal.actionText, { color: Colors.error }]}>Recusar</Text>
-                          </Pressable>
-                          <Pressable
-                            style={[modal.actionBtn, modal.actionAceitar]}
-                            onPress={() => handleStatus(cand, 'aceito')}
-                          >
-                            <Ionicons name="checkmark" size={16} color={Colors.text} />
-                            <Text style={modal.actionText}>Contratar</Text>
                           </Pressable>
                         </>
                       )}
@@ -466,21 +481,20 @@ const modal = StyleSheet.create({
   },
   statusText: { fontSize: 11, fontWeight: '700' },
   experiencia: { fontSize: 13, color: Colors.textSecondary, lineHeight: 20 },
-  detailsRow: { flexDirection: 'row', gap: 16 },
-  detail: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  detailText: { fontSize: 13, color: Colors.text, fontWeight: '600' },
-  actions: { flexDirection: 'row', gap: 10, paddingTop: 4 },
+  detailsRow: { flexDirection: 'row', gap: 16, flexWrap: 'wrap' },
+  detail: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
+  detailText: { fontSize: 13, color: Colors.text, fontWeight: '600', flexShrink: 1 },
+  actions: { flexDirection: 'column', gap: 8, paddingTop: 4 },
   actionBtn: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 10,
+    paddingVertical: 11,
     borderRadius: 10,
     borderWidth: 1.5,
   },
   actionRecusar: { borderColor: Colors.error, backgroundColor: 'rgba(232,69,96,0.08)' },
   actionAceitar: { borderColor: Colors.primary, backgroundColor: Colors.primary },
-  actionText: { fontSize: 13, fontWeight: '700', color: Colors.text },
+  actionText: { fontSize: 14, fontWeight: '700', color: Colors.text },
 });

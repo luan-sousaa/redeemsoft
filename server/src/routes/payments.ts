@@ -70,10 +70,9 @@ router.post('/:id/simulate', async (req: Request, res: Response) => {
   const { id } = req.params;
 
   try {
-    const response = await fetch(`${ABACATEPAY_BASE}/transparents/${id}/simulate-payment`, {
+    const response = await fetch(`${ABACATEPAY_BASE}/transparents/simulate-payment?id=${id}`, {
       method: 'POST',
       headers: abacateHeaders(),
-      body: JSON.stringify({ id }),
     });
 
     const json = await response.json() as { success: boolean; error: string | null };

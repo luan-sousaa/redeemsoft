@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
 import { Colors } from '@/constants/colors';
+import { authService } from '@/services/authService';
 import { paymentService } from '@/services/paymentService';
 import { Button } from '@/components/ui/Button';
 
@@ -30,11 +31,13 @@ function useCountdown(expiresAt: string) {
 
 export default function PagamentoPixScreen() {
   const router = useRouter();
-  const { id, brCode, brCodeBase64, expiresAt } = useLocalSearchParams<{
+  const { id, brCode, brCodeBase64, expiresAt, projetoId, candidaturaId } = useLocalSearchParams<{
     id: string;
     brCode: string;
     brCodeBase64: string;
     expiresAt: string;
+    projetoId?: string;
+    candidaturaId?: string;
   }>();
 
   const { label: countdown, expired } = useCountdown(expiresAt);
@@ -50,11 +53,16 @@ export default function PagamentoPixScreen() {
     setIsSimulating(true);
     try {
       await paymentService.simulatePayment(id);
+
+      if (projetoId && candidaturaId) {
+        await authService.atualizarStatusCandidatura(projetoId, candidaturaId, 'aceito');
+      }
+
       setIsPaid(true);
       Toast.show({
         type: 'success',
         text1: 'Pagamento confirmado!',
-        text2: 'Simulação de sandbox concluída.',
+        text2: projetoId ? 'Desenvolvedor contratado com sucesso.' : 'Simulação de sandbox concluída.',
       });
     } catch (err) {
       Toast.show({
