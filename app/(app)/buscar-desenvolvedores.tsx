@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '700',
     color: Colors.text,
   },
@@ -215,6 +215,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: Colors.text,
     fontSize: 14,
+    paddingVertical: 0,
   },
   label: {
     color: Colors.textSecondary,

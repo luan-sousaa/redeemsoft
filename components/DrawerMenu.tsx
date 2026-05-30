@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import React from 'react';
@@ -15,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors } from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAvatar } from '@/hooks/use-avatar';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -58,6 +60,7 @@ export function DrawerMenu({
 }) {
   const { user, logout } = useAuth();
   const router = useRouter();
+  const { avatarUri } = useAvatar();
   const isDev = user?.type === 'developer';
   const firstName = user?.name?.split(' ')[0] ?? 'Usuário';
 
@@ -186,9 +189,13 @@ export function DrawerMenu({
           {/* Avatar */}
           <View style={styles.drawerAvatarContainer}>
             <View style={styles.drawerAvatar}>
-              <Text style={styles.drawerAvatarLetter}>
-                {user?.name?.charAt(0).toUpperCase() ?? '?'}
-              </Text>
+              {avatarUri ? (
+                <Image source={{ uri: avatarUri }} style={styles.drawerAvatarImage} contentFit="cover" />
+              ) : (
+                <Text style={styles.drawerAvatarLetter}>
+                  {user?.name?.charAt(0).toUpperCase() ?? '?'}
+                </Text>
+              )}
             </View>
           </View>
 
@@ -234,7 +241,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     bottom: 0,
-    width: '75%',
+    width: '80%',
     backgroundColor: Colors.background,
     borderRightWidth: 1,
     borderRightColor: Colors.border,
@@ -272,6 +279,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  drawerAvatarImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+  },
   drawerAvatarLetter: {
     fontSize: 30,
     fontWeight: '800',
@@ -289,7 +301,7 @@ const styles = StyleSheet.create({
   drawerItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 12,
     paddingVertical: 14,
     paddingHorizontal: 10,
     borderRadius: 12,
@@ -299,7 +311,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceHighlight,
   },
   drawerItemText: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: '600',
     color: Colors.text,
   },

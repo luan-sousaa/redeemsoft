@@ -229,6 +229,7 @@ function ProjetoCard({
           </Text>
         </Pressable>
       </View>
+
     </View>
   );
 }
@@ -387,9 +388,9 @@ const styles = StyleSheet.create({
   },
   orcamentoText: { fontSize: 13, fontWeight: '700', color: Colors.text },
   cardDesc: { fontSize: 13, color: Colors.textSecondary, lineHeight: 20, marginBottom: 12 },
-  cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  footerInfo: { flexDirection: 'row', alignItems: 'center', gap: 5, flex: 1 },
-  footerText: { fontSize: 12, color: Colors.textSecondary, flexShrink: 1 },
+  cardFooter: { flexDirection: 'column', gap: 25 },
+  footerInfo: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  footerText: { fontSize: 9, color: Colors.textSecondary, flexShrink: 1 },
   dot: { width: 3, height: 3, borderRadius: 2, backgroundColor: Colors.border },
   candBtn: {
     flexDirection: 'row',
@@ -399,6 +400,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
+    alignSelf: 'flex-start',
   },
   candBtnText: { fontSize: 12, color: Colors.primary, fontWeight: '600' },
   badge: {

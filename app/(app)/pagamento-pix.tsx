@@ -77,7 +77,7 @@ export default function PagamentoPixScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="chevron-back" size={24} color={Colors.text} />
@@ -255,8 +255,10 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   paidContainer: {
+    flex: 1,
     alignItems: 'center',
-    paddingTop: 40,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
   },
   paidIcon: {
     marginBottom: 24,
@@ -266,6 +268,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: Colors.text,
     marginBottom: 8,
+    textAlign: 'center',
   },
   paidText: {
     fontSize: 14,

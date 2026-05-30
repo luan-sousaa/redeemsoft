@@ -2,19 +2,26 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useState } from 'react';
 
-const AVATAR_KEY = '@redeemsoft:avatar';
+import { useAuth } from '@/contexts/AuthContext';
+
+function avatarKey(userId: string) {
+  return `@redeemsoft:avatar:${userId}`;
+}
 
 export function useAvatar() {
+  const { user } = useAuth();
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [isPickerLoading, setIsPickerLoading] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem(AVATAR_KEY).then((uri) => {
-      if (uri) setAvatarUri(uri);
+    if (!user?.id) { setAvatarUri(null); return; }
+    AsyncStorage.getItem(avatarKey(user.id)).then((uri) => {
+      setAvatarUri(uri ?? null);
     });
-  }, []);
+  }, [user?.id]);
 
   async function pickAvatar() {
+    if (!user?.id) return;
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') return;
 
@@ -30,7 +37,7 @@ export function useAvatar() {
       if (!result.canceled && result.assets[0]) {
         const uri = result.assets[0].uri;
         setAvatarUri(uri);
-        await AsyncStorage.setItem(AVATAR_KEY, uri);
+        await AsyncStorage.setItem(avatarKey(user.id), uri);
       }
     } finally {
       setIsPickerLoading(false);

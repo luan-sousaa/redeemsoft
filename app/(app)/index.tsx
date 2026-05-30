@@ -6,10 +6,12 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Image } from 'expo-image';
 import { Logo } from '@/components/Logo';
 import { DrawerMenu } from '@/components/DrawerMenu';
 import { Colors } from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAvatar } from '@/hooks/use-avatar';
 
 // ─── Quick-access card ────────────────────────────────────────────────────────
 
@@ -155,30 +157,23 @@ export default function HomeScreen() {
   const isDev = user?.type === 'developer';
   const typeLabel = isDev ? 'Desenvolvedor' : 'Empresa';
   const avatarLetter = user?.name?.charAt(0).toUpperCase() ?? '?';
+  const { avatarUri } = useAvatar();
 
   return (
     <SafeAreaView style={styles.safe}>
-      {/* Drawer menu (empresa) */}
-      {!isDev && (
-        <DrawerMenu
-          visible={drawerOpen}
-          onClose={() => setDrawerOpen(false)}
-          activeScreen="home"
-        />
-      )}
+      <DrawerMenu
+        visible={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        activeScreen="home"
+      />
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
         {/* Top bar */}
         <View style={styles.topBar}>
-          {/* Botão sanduiche apenas para empresa */}
-          {isDev ? (
-            <Logo size="sm" />
-          ) : (
-            <Pressable style={styles.menuBtn} onPress={() => setDrawerOpen(true)}>
-              <Ionicons name="menu-outline" size={28} color={Colors.text} />
-            </Pressable>
-          )}
+          <Pressable style={styles.menuBtn} onPress={() => setDrawerOpen(true)}>
+            <Ionicons name="menu-outline" size={28} color={Colors.text} />
+          </Pressable>
           <Pressable style={styles.logoutButton} onPress={logout}>
             <Ionicons name="log-out-outline" size={24} color={Colors.textSecondary} />
           </Pressable>
@@ -187,7 +182,11 @@ export default function HomeScreen() {
         {/* Perfil */}
         <View style={styles.profileSection}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarLetter}>{avatarLetter}</Text>
+            {avatarUri ? (
+              <Image source={{ uri: avatarUri }} style={styles.avatarImage} contentFit="cover" />
+            ) : (
+              <Text style={styles.avatarLetter}>{avatarLetter}</Text>
+            )}
           </View>
           <Text style={styles.userName}>Olá, {user?.name}</Text>
           <View style={[styles.typeBadge, isDev ? styles.typeBadgeDev : styles.typeBadgeEmpresa]}>
@@ -225,6 +224,11 @@ const styles = StyleSheet.create({
   menuBtn: { padding: 4 },
 
   profileSection: { alignItems: 'center', marginBottom: 32 },
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
   avatar: {
     width: 80,
     height: 80,

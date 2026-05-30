@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
   },
   chipLabelAtivo: { color: Colors.text },
   chipDesc: {
-    fontSize: 10,
+    fontSize: 9,
     color: Colors.textSecondary,
     fontWeight: '500',
   },
