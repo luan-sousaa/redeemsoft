@@ -134,8 +134,8 @@ const PROJETOS_EMPRESA_MOCK: ProjetoEmpresa[] = [
     status: 'ativo',
     candidaturas: [
       { id: 'c1', desenvolvedorId: 'd1', experiencia: '8 anos em migração de sistemas legados', proposta: 16500, prazo: '55 dias', status: 'pendente' },
-      { id: 'c2', desenvolvedorId: 'd2', experiencia: '5 anos com Node.js e React', proposta: 17800, prazo: '60 dias', status: 'aceito' },
-      { id: 'c3', desenvolvedorId: 'd3', experiencia: '6 anos, especialista em Delphi', proposta: 15000, prazo: '70 dias', status: 'recusado' },
+      { id: 'c2', desenvolvedorId: 'd2', experiencia: '5 anos com Node.js e React', proposta: 17800, prazo: '60 dias', status: 'pendente' },
+      { id: 'c3', desenvolvedorId: 'd3', experiencia: '6 anos, especialista em Delphi', proposta: 15000, prazo: '70 dias', status: 'pendente' },
     ],
     dataCriacao: new Date('2025-03-15'),
   },
@@ -149,7 +149,7 @@ const PROJETOS_EMPRESA_MOCK: ProjetoEmpresa[] = [
     stack: 'React Native',
     status: 'em_andamento',
     candidaturas: [
-      { id: 'c4', desenvolvedorId: 'd4', experiencia: '4 anos em React Native', proposta: 4200, prazo: '12 dias', status: 'aceito' },
+      { id: 'c4', desenvolvedorId: 'd4', experiencia: '4 anos em React Native', proposta: 4200, prazo: '12 dias', status: 'pendente' },
     ],
     dataCriacao: new Date('2025-03-28'),
   },
