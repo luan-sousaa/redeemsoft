@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Colors } from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
+import Head from 'expo-router/head';
 
 type UserType = 'client' | 'developer';
 
@@ -132,35 +133,55 @@ export default function RegisterScreen() {
     return Object.keys(newErrors).length === 0;
   }
 
-  async function handleRegister() {
-    setHasSubmitted(true);
-    if (!validate()) return;
-    if (!termsAccepted) {
-      Toast.show({
-        type: 'error',
-        text1: 'Termos de uso',
-        text2: 'Você precisa aceitar os termos de uso para continuar.',
-      });
-      return;
-    }
-    setIsLoading(true);
-    try {
-      await register({ name: name.trim(), email, password, type: userType, city: city.trim(), state, cpfCnpj });
-    } catch (e: unknown) {
-      Toast.show({
-        type: 'error',
-        text1: 'Erro ao criar conta',
-        text2: e instanceof Error ? e.message : 'Tente novamente.',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+async function handleRegister() {
+  setHasSubmitted(true);
+
+  if (!validate()) return;
+  if (!termsAccepted) {
+    Toast.show({
+      type: 'error',
+      text1: 'Termos de uso',
+      text2: 'Você precisa aceitar os termos de uso para continuar.',
+    });
+    return;
   }
 
+  try {
+
+    await register({ 
+      nome: name.trim(), 
+      email: email.trim(), 
+      senha: password, 
+      type: userType, 
+      cidade: city?.trim(), 
+      estado: state?.trim(), 
+      cpfCnpj: cpfCnpj?.replace(/\D/g, '') 
+    } as any);
+
+    Toast.show({
+      type: 'success',
+      text1: 'Sucesso!',
+      text2: 'Sua conta foi criada perfeitamente.',
+    });
+
+       router.replace('/login');
+
+  } catch (error: any) {
+    Toast.show({
+      type: 'error',
+      text1: 'Ops! Algo deu errado',
+      text2: error.message || 'Não foi possível criar a conta. Tente novamente.',
+    });
+  }
+}
   const e = hasSubmitted ? errors : {};
 
   return (
     <SafeAreaView style={styles.safe}>
+       <Head>
+              <title> Criar Conta | RedeemSoft</title>
+              <meta name="description" content="Crie sua conta no RedeemSoft" />
+            </Head>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}

@@ -14,9 +14,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
-
 import { Colors } from '@/constants/colors';
-import { authService, type Candidatura, type Desenvolvedor, type ProjetoEmpresa } from '@/services/authService';
+import { CandidaturaDetalhada, Desenvolvedor, ProjetoEmpresa , Aplicacao} from '@/types';
+import { projetoService } from '@/services/projetoService';
+import Head from 'expo-router/head';
 
 // ─── Status labels ─────────────────────────────────────────────────────────────
 
@@ -46,15 +47,17 @@ function CandidatosModal({
   onUpdate: () => void;
 }) {
   const router = useRouter();
-  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [loadingId, setLoadingId] = useState<number | null>(null);
+  const devMap = Object.fromEntries(desenvolvedores.map((d) => [d.idDev, d]));
 
-  const devMap = Object.fromEntries(desenvolvedores.map((d) => [d.id, d]));
+  async function handleRecusar(cand: CandidaturaDetalhada) {
 
-  async function handleRecusar(cand: Candidatura) {
-    setLoadingId(cand.id);
-    const dev = devMap[cand.desenvolvedorId];
+    setLoadingId(cand.idAplicacao);
+    const dev = devMap[cand.idDev];
+
     try {
-      await authService.atualizarStatusCandidatura(projeto.id, cand.id, 'recusado');
+
+      await projetoService.atualizarStatusCandidatura(projeto.idProjeto, cand.idAplicacao, 'recusado');
       Toast.show({
         type: 'success',
         text1: 'Candidato recusado',
@@ -68,16 +71,16 @@ function CandidatosModal({
     }
   }
 
-  function handleContratar(cand: Candidatura) {
-    const dev = devMap[cand.desenvolvedorId];
+  function handleContratar(cand: CandidaturaDetalhada) {
+    const dev = devMap[cand.idDev];
     onClose();
     router.push({
-      pathname: '/(app)/checkout',
+      pathname: '/(app)/checkout' as any,
       params: {
-        amount: String(cand.proposta * 100),
+        amount: String(cand.proposta ? cand.proposta * 100 : 0),
         description: `Contratar ${dev?.nome ?? 'desenvolvedor'} — ${projeto.titulo}`,
-        projetoId: projeto.id,
-        candidaturaId: cand.id,
+        projetoId: projeto.idProjeto,
+        candidaturaId: cand.idAplicacao,
       },
     });
   }
@@ -108,10 +111,10 @@ function CandidatosModal({
           <ScrollView contentContainerStyle={modal.list} showsVerticalScrollIndicator={false}>
             {projeto.candidaturas.map((cand) => {
               const cfg = CAND_STATUS_CONFIG[cand.status];
-              const isLoading = loadingId === cand.id;
-              const dev = devMap[cand.desenvolvedorId];
+              const isLoading = loadingId === cand.idDev;
+              const dev = devMap[cand.idDev];
               return (
-                <View key={cand.id} style={modal.card}>
+                <View key={cand.idDev} style={modal.card}>
                   {/* Cabeçalho do candidato */}
                   <View style={modal.cardHeader}>
                     <View style={modal.avatar}>
@@ -119,7 +122,7 @@ function CandidatosModal({
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <Text style={modal.candName} numberOfLines={1}>{dev?.nome ?? 'Desconhecido'}</Text>
-                      <Text style={modal.candEmail} numberOfLines={1}>{dev?.descricao ?? ''}</Text>
+                      <Text style={modal.candEmail} numberOfLines={1}>{dev?.email ?? 'Sem e-mail'}</Text>                    
                     </View>
                     <View style={[modal.statusBadge, { backgroundColor: cfg.bg, flexShrink: 0 }]}>
                       <Text style={[modal.statusText, { color: cfg.color }]}>{cfg.label}</Text>
@@ -127,18 +130,18 @@ function CandidatosModal({
                   </View>
 
                   {/* Detalhes */}
-                  <Text style={modal.experiencia} numberOfLines={2}>{cand.experiencia}</Text>
+                  <Text style={modal.experiencia} numberOfLines={2}>{cand.desenvolvedor?.experiencia ?? 'Sem experiência informada'}</Text>
 
                   <View style={modal.detailsRow}>
                     <View style={modal.detail}>
                       <Ionicons name="cash-outline" size={14} color={Colors.primary} />
                       <Text style={modal.detailText} numberOfLines={1}>
-                        {cand.proposta.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
+                        {cand.proposta?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
                       </Text>
                     </View>
                     <View style={modal.detail}>
                       <Ionicons name="time-outline" size={14} color={Colors.primary} />
-                      <Text style={modal.detailText} numberOfLines={1}>{cand.prazo}</Text>
+                      <Text style={modal.detailText} numberOfLines={1}>{cand.projeto?.prazo ?? 'Prazo não informado'}</Text>
                     </View>
                   </View>
 
@@ -243,15 +246,15 @@ export default function MeusProjetosScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [projetoSelecionado, setProjetoSelecionado] = useState<ProjetoEmpresa | null>(null);
 
-  const carregar = useCallback(async () => {
+const carregar = useCallback(async () => {
     try {
-      const [data, devs] = await Promise.all([
-        authService.getProjetosEmpresa(),
-        authService.getDesenvolvedores(),
-      ]);
+      setIsLoading(true);
+      
+      const data = await projetoService.obterProjetos();
+      
       setProjetos(data);
-      setDesenvolvedores(devs);
-    } catch {
+      
+    } catch (error) {
       Toast.show({ type: 'error', text1: 'Erro ao carregar projetos' });
     } finally {
       setIsLoading(false);
@@ -267,6 +270,11 @@ export default function MeusProjetosScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+
+       <Head>
+                    <title> Minhas Solicitações | RedeemSoft</title>
+                    <meta name="description" content="Veja suas solicitações de projeto no RedeemSoft" />
+                  </Head>
       {/* Header */}
       <View style={styles.header}>
         <Pressable style={styles.backBtn} onPress={() => router.back()}>
@@ -295,7 +303,7 @@ export default function MeusProjetosScreen() {
       ) : (
         <FlatList
           data={projetos}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.idProjeto.toString()}
           contentContainerStyle={styles.lista}
           showsVerticalScrollIndicator={false}
           ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
@@ -333,7 +341,7 @@ export default function MeusProjetosScreen() {
   );
 }
 
-// ─── Estilos ────────────────────────────────────────────────────────────────────
+// ─── Estilos (Mantidos Exatamente Iguais) ──────────────────────────────────────
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },

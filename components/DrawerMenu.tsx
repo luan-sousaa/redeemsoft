@@ -62,7 +62,7 @@ export function DrawerMenu({
   const router = useRouter();
   const { avatarUri } = useAvatar();
   const isDev = user?.type === 'developer';
-  const firstName = user?.name?.split(' ')[0] ?? 'Usuário';
+  const firstName = user?.nome?.split(' ')[0] ?? 'Usuário';
 
   const devItems: DrawerNavItem[] = [
     {
@@ -193,7 +193,7 @@ export function DrawerMenu({
                 <Image source={{ uri: avatarUri }} style={styles.drawerAvatarImage} contentFit="cover" />
               ) : (
                 <Text style={styles.drawerAvatarLetter}>
-                  {user?.name?.charAt(0).toUpperCase() ?? '?'}
+                  {user?.nome?.charAt(0).toUpperCase() ?? '?'}
                 </Text>
               )}
             </View>

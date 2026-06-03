@@ -1,0 +1,12 @@
+# Dependências
+node_modules/
+
+# Banco de Dados Local (SQLite)
+Backend/src/db/news.db
+
+# Configurações de ambiente
+.env
+
+# Logs e builds
+npm-debug.log*
+dist/

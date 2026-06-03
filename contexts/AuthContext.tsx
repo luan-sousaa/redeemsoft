@@ -1,15 +1,42 @@
 import React, { createContext, useContext, useEffect, useReducer } from 'react';
-import { authService, type RegisterData, type User } from '@/services/authService';
+import { authService } from '@/services/authService';
 
+type User = Record<string, unknown>;
+
+export interface Usuario {
+  idUsuario: number;
+  nome: string;
+  email: string;
+  senha: string;
+  type: 'client' | 'developer';
+  cidade?: string | null;
+  estado?: string | null;
+  cpfCnpj?: string | null;
+}
+
+export type RegisterData = {
+  idUsuario?: number;
+  nome: string;
+  email: string;
+  senha: string;
+  type: "client" | "developer";
+  cidade?: string;
+  estado?: string;
+  cpfCnpj?: string;
+};
+interface LoginResponse {
+  mensagem: string;
+  user: Usuario;
+};
 type AuthState = {
-  user: User | null;
+  user: Usuario | null;
   isLoading: boolean;
   isAuthenticated: boolean;
 };
 
 type AuthAction =
   | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_USER'; payload: User | null };
+  | { type: 'SET_USER'; payload: Usuario | null };
 
 function authReducer(state: AuthState, action: AuthAction): AuthState {
   switch (action.type) {
@@ -47,19 +74,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
-    authService.getStoredUser().then((user) => {
-      dispatch({ type: 'SET_USER', payload: user });
-    });
+    (async () => {
+      try {
+        
+        if (typeof (authService as any).getStoredUser === 'function') {
+          const user = await (authService as any).getStoredUser();
+          dispatch({ type: 'SET_USER', payload: user });
+        } else if (typeof (authService as any).getUser === 'function') {
+          const user = await (authService as any).getUser();
+          dispatch({ type: 'SET_USER', payload: user });
+        } else {
+
+          dispatch({ type: 'SET_LOADING', payload: false });
+        }
+      } catch (err) {
+        dispatch({ type: 'SET_LOADING', payload: false });
+      }
+    })();
   }, []);
 
   async function login(email: string, password: string) {
-    const user = await authService.login(email, password);
-    dispatch({ type: 'SET_USER', payload: user });
+
+    const response = (await authService.login(email, password)) as unknown as LoginResponse;
+    
+    const userData = response.user;
+    dispatch({ type: 'SET_USER', payload: response.user });
   }
 
   async function loginWithGoogle(token: string) {
-    const user = await authService.loginWithGoogle(token);
-    dispatch({ type: 'SET_USER', payload: user });
+    if (typeof (authService as any).loginWithGoogle === 'function') {
+      const user = await (authService as any).loginWithGoogle(token);
+      dispatch({ type: 'SET_USER', payload: user });
+    } else {
+      throw new Error('authService.loginWithGoogle is not implemented');
+    }
   }
 
   async function register(data: RegisterData) {
@@ -72,15 +120,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function forgotPassword(email: string) {
-    await authService.forgotPassword(email);
+    if (typeof (authService as any).forgotPassword === 'function') {
+      await (authService as any).forgotPassword(email);
+    } else {
+      throw new Error('authService.forgotPassword is not implemented');
+    }
   }
 
   async function verifyCode(email: string, code: string) {
-    await authService.verifyCode(email, code);
+    if (typeof (authService as any).verifyCode === 'function') {
+      await (authService as any).verifyCode(email, code);
+    } else {
+      throw new Error('authService.verifyCode is not implemented');
+    }
   }
 
   async function resetPassword(email: string, code: string, newPassword: string) {
-    await authService.resetPassword(email, code, newPassword);
+    if (typeof (authService as any).resetPassword === 'function') {
+      await (authService as any).resetPassword(email, code, newPassword);
+    } else {
+      throw new Error('authService.resetPassword is not implemented');
+    }
   }
 
   return (

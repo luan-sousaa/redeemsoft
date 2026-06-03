@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAvatar } from '@/hooks/use-avatar';
-
+import Head from 'expo-router/head';
 // ─── Item de configuração ─────────────────────────────────────────────────────
 
 type ConfigItem = {
@@ -105,7 +105,7 @@ export default function ConfiguracoesScreen() {
     {
       label: 'Projetos',
       icon: 'briefcase-outline',
-      onPress: () => {},
+      onPress: () => router.push('/(app)/meus-projetos' as Href),
     },
   ];
 
@@ -125,6 +125,11 @@ export default function ConfiguracoesScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+
+      <Head>
+                          <title> Configurações | RedeemSoft</title>
+                          <meta name="description" content="Gerencie suas configurações no RedeemSoft" />
+                        </Head>
       {/* Header */}
       <View style={styles.header}>
         <Pressable style={styles.backBtn} onPress={() => router.back()}>
@@ -145,12 +150,12 @@ export default function ConfiguracoesScreen() {
               <Image source={{ uri: avatarUri }} style={styles.avatarImage} contentFit="cover" />
             ) : (
               <Text style={styles.avatarLetter}>
-                {user?.name?.charAt(0).toUpperCase() ?? '?'}
+                {user?.nome?.charAt(0).toUpperCase() ?? '?'}
               </Text>
             )}
           </View>
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{user?.name}</Text>
+            <Text style={styles.profileName}>{user?.nome}</Text>
             <Text style={styles.profileEmail}>{user?.email}</Text>
           </View>
           <Pressable

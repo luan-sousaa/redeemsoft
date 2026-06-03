@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Colors } from '@/constants/colors';
 import { authService } from '@/services/authService';
-
+import Head from 'expo-router/head';
 type Modalidade = 'P' | 'SP' | 'H';
 
 const MODALIDADES: { key: Modalidade; label: string; desc: string }[] = [
@@ -92,6 +92,10 @@ export default function CriarProjetoScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <Head>
+                          <title> Novo Projeto | RedeemSoft</title>
+                          <meta name="description" content="Crie um novo projeto no RedeemSoft" />
+                        </Head>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}

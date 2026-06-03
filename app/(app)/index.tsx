@@ -12,7 +12,7 @@ import { DrawerMenu } from '@/components/DrawerMenu';
 import { Colors } from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAvatar } from '@/hooks/use-avatar';
-
+import Head from 'expo-router/head';
 // ─── Quick-access card ────────────────────────────────────────────────────────
 
 function AcessoCard({
@@ -52,6 +52,10 @@ function HomeDev() {
   return (
     <>
       <Animated.View entering={FadeInUp.delay(0).duration(350)}>
+         <Head>
+                    <title> Home | RedeemSoft</title>
+                    <meta name="description" content="Página inicial do RedeemSoft" />
+                  </Head>
         <View style={styles.sectionHeader}>
           <Ionicons name="flash-outline" size={16} color={Colors.primary} />
           <Text style={styles.sectionTitle}>Acesso rápido</Text>
@@ -97,8 +101,13 @@ function HomeDev() {
 function HomeEmpresa() {
   const router = useRouter();
   return (
+    
     <>
       <Animated.View entering={FadeInUp.delay(0).duration(350)}>
+        <Head>
+                    <title> Home | RedeemSoft</title>
+                    <meta name="description" content="Página inicial do RedeemSoft" />
+                  </Head>
         <View style={styles.sectionHeader}>
           <Ionicons name="flash-outline" size={16} color={Colors.primary} />
           <Text style={styles.sectionTitle}>Acesso rápido</Text>
@@ -156,7 +165,7 @@ export default function HomeScreen() {
 
   const isDev = user?.type === 'developer';
   const typeLabel = isDev ? 'Desenvolvedor' : 'Empresa';
-  const avatarLetter = user?.name?.charAt(0).toUpperCase() ?? '?';
+  const avatarLetter = user?.nome?.charAt(0).toUpperCase() ?? '?';
   const { avatarUri } = useAvatar();
 
   return (
@@ -188,7 +197,7 @@ export default function HomeScreen() {
               <Text style={styles.avatarLetter}>{avatarLetter}</Text>
             )}
           </View>
-          <Text style={styles.userName}>Olá, {user?.name}</Text>
+          <Text style={styles.userName}>Olá, {user?.nome}</Text>
           <View style={[styles.typeBadge, isDev ? styles.typeBadgeDev : styles.typeBadgeEmpresa]}>
             <Ionicons
               name={isDev ? 'code-slash-outline' : 'business-outline'}

@@ -16,11 +16,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
-
 import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAvatar } from '@/hooks/use-avatar';
+import Head from 'expo-router/head';  
 
 const { width } = Dimensions.get('window');
 const GRID_GAP = 12;
@@ -66,6 +66,10 @@ export default function SobreMimScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <Head>
+                    <title> Sobre Mim | RedeemSoft</title>
+                    <meta name="description" content="Seu perfil no RedeemSoft" />
+                  </Head>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -76,7 +80,7 @@ export default function SobreMimScreen() {
             <Ionicons name="arrow-back-circle-outline" size={30} color={Colors.text} />
           </Pressable>
           <Text style={styles.headerTitle} numberOfLines={1}>
-            {user?.name ?? 'Nome Prestador'}
+            {user?.nome ?? 'Nome Prestador'}
           </Text>
         </View>
 
