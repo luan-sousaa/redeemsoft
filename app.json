@@ -27,7 +27,8 @@
       "favicon": "./assets/images/favicon.png"
     },
     "extra": {
-      "googleWebClientId": "YOUR_GOOGLE_WEB_CLIENT_ID.apps.googleusercontent.com"
+      "googleWebClientId": "YOUR_GOOGLE_WEB_CLIENT_ID.apps.googleusercontent.com",
+      "abacatePayApiKey": "abc_dev_XZKJm2xEmtSbCnqfdaEwbqaJ"
     },
     "plugins": [
       "expo-router",
@@ -43,7 +44,8 @@
           }
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true,
