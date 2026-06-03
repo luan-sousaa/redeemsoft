@@ -9,6 +9,7 @@ export const usuario = sqliteTable("usuario",{
   type: text("type", { enum: ["client", "developer"] }).notNull(),
   cidade: text("cidade"),
   estado: text("estado"),
+  cpfCnpj: text("cpfCnpj"),
 });
 
 export const desenvolvedor = sqliteTable("desenvolvedor",{
@@ -30,15 +31,19 @@ export const cliente = sqliteTable("cliente",{
     .notNull()
     .references(() => usuario.idUsuario),
   empresa: text("empresa"),
-  setor: text("setor"),
-  porte: text("porte", { enum: ["pequena", "media", "grande"] }).notNull(),
 });
+
 
 export const aplicacao = sqliteTable("aplicacao",{
   idAplicacao: integer("id").primaryKey({autoIncrement:true}).notNull(),
   idDev: integer("idDev")
     .notNull()
     .references(() => desenvolvedor.idDev, { onDelete: "cascade" }),
+    
+  idProjeto: integer("idProjeto")
+    .notNull()
+    .references(() => novoProjeto.idProjeto, { onDelete: "cascade" }),
+    
   proposta: real("proposta"),
   status: text("status", { enum: ["pendente", "aceito", "recusado"] }).notNull(),
 })
@@ -54,6 +59,11 @@ export const novoProjeto = sqliteTable("projeto",{
   prazo: integer("prazo").notNull(),
   modalidade: text("modalidade", { enum: ["presencial", "remoto", "híbrido"] }).notNull(),
   stack: text("stack").notNull(),
+  
+  status: text("status", { enum: ["ativo", "em_andamento", "concluido"] })
+    .notNull()
+    .default("ativo"),
+    
   dataCriacao: integer("dataCriacao", { mode: "timestamp" })
     .$defaultFn(() => new Date()),
 })

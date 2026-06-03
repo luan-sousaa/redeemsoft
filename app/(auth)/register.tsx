@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Colors } from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
+import Head from 'expo-router/head';
 
 type UserType = 'client' | 'developer';
 
@@ -30,14 +31,63 @@ type FormErrors = {
   state?: string;
   password?: string;
   confirmPassword?: string;
+  cpfCnpj?: string;
 };
+
+function maskCPF(v: string): string {
+  return v
+    .replace(/\D/g, '')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+    .slice(0, 14);
+}
+
+function maskCNPJ(v: string): string {
+  return v
+    .replace(/\D/g, '')
+    .replace(/(\d{2})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1/$2')
+    .replace(/(\d{4})(\d{1,2})$/, '$1-$2')
+    .slice(0, 18);
+}
+
+function validateCPF(cpf: string): boolean {
+  const d = cpf.replace(/\D/g, '');
+  if (d.length !== 11 || /^(\d)\1+$/.test(d)) return false;
+  let sum = 0;
+  for (let i = 0; i < 9; i++) sum += parseInt(d[i]) * (10 - i);
+  let rem = (sum * 10) % 11;
+  if (rem === 10 || rem === 11) rem = 0;
+  if (rem !== parseInt(d[9])) return false;
+  sum = 0;
+  for (let i = 0; i < 10; i++) sum += parseInt(d[i]) * (11 - i);
+  rem = (sum * 10) % 11;
+  if (rem === 10 || rem === 11) rem = 0;
+  return rem === parseInt(d[10]);
+}
+
+function validateCNPJ(cnpj: string): boolean {
+  const d = cnpj.replace(/\D/g, '');
+  if (d.length !== 14 || /^(\d)\1+$/.test(d)) return false;
+  const w1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  let sum = w1.reduce((acc, w, i) => acc + parseInt(d[i]) * w, 0);
+  let rem = sum % 11;
+  const dv1 = rem < 2 ? 0 : 11 - rem;
+  if (dv1 !== parseInt(d[12])) return false;
+  const w2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  sum = w2.reduce((acc, w, i) => acc + parseInt(d[i]) * w, 0);
+  rem = sum % 11;
+  const dv2 = rem < 2 ? 0 : 11 - rem;
+  return dv2 === parseInt(d[13]);
+}
 
 const ESTADOS_BR = [
   'AC','AL','AP','AM','BA','CE','DF','ES','GO',
   'MA','MT','MS','MG','PA','PB','PR','PE','PI',
   'RJ','RN','RS','RO','RR','SC','SP','SE','TO',
 ];
-
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -50,6 +100,7 @@ export default function RegisterScreen() {
   const [stateModalVisible, setStateModalVisible] = useState(false);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [cpfCnpj, setCpfCnpj] = useState('');
   const [userType, setUserType] = useState<UserType>('client');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -71,39 +122,66 @@ export default function RegisterScreen() {
     else if (password.length < 8) newErrors.password = 'Senha deve ter ao menos 8 caracteres';
     if (!confirmPassword) newErrors.confirmPassword = 'Confirme sua senha';
     else if (confirmPassword !== password) newErrors.confirmPassword = 'As senhas não coincidem';
+    if (!cpfCnpj) {
+      newErrors.cpfCnpj = userType === 'developer' ? 'CPF é obrigatório' : 'CNPJ é obrigatório';
+    } else if (userType === 'developer' && !validateCPF(cpfCnpj)) {
+      newErrors.cpfCnpj = 'CPF inválido';
+    } else if (userType === 'client' && !validateCNPJ(cpfCnpj)) {
+      newErrors.cpfCnpj = 'CNPJ inválido';
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }
 
-  async function handleRegister() {
-    setHasSubmitted(true);
-    if (!validate()) return;
-    if (!termsAccepted) {
-      Toast.show({
-        type: 'error',
-        text1: 'Termos de uso',
-        text2: 'Você precisa aceitar os termos de uso para continuar.',
-      });
-      return;
-    }
-    setIsLoading(true);
-    try {
-      await register({ nome: name.trim(), email, senha:password, type: userType, cidade: city.trim(), estado: state });
-    } catch (e: unknown) {
-      Toast.show({
-        type: 'error',
-        text1: 'Erro ao criar conta',
-        text2: e instanceof Error ? e.message : 'Tente novamente.',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+async function handleRegister() {
+  setHasSubmitted(true);
+
+  if (!validate()) return;
+  if (!termsAccepted) {
+    Toast.show({
+      type: 'error',
+      text1: 'Termos de uso',
+      text2: 'Você precisa aceitar os termos de uso para continuar.',
+    });
+    return;
   }
 
+  try {
+
+    await register({ 
+      nome: name.trim(), 
+      email: email.trim(), 
+      senha: password, 
+      type: userType, 
+      cidade: city?.trim(), 
+      estado: state?.trim(), 
+      cpfCnpj: cpfCnpj?.replace(/\D/g, '') 
+    } as any);
+
+    Toast.show({
+      type: 'success',
+      text1: 'Sucesso!',
+      text2: 'Sua conta foi criada perfeitamente.',
+    });
+
+       router.replace('/login');
+
+  } catch (error: any) {
+    Toast.show({
+      type: 'error',
+      text1: 'Ops! Algo deu errado',
+      text2: error.message || 'Não foi possível criar a conta. Tente novamente.',
+    });
+  }
+}
   const e = hasSubmitted ? errors : {};
 
   return (
     <SafeAreaView style={styles.safe}>
+       <Head>
+              <title> Criar Conta | RedeemSoft</title>
+              <meta name="description" content="Crie sua conta no RedeemSoft" />
+            </Head>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -215,7 +293,7 @@ export default function RegisterScreen() {
           <View style={styles.typeRow}>
             <Pressable
               style={[styles.typeButton, userType === 'client' && styles.typeButtonSelected]}
-              onPress={() => setUserType('client')}
+              onPress={() => { setUserType('client'); setCpfCnpj(''); setErrors(prev => ({ ...prev, cpfCnpj: undefined })); }}
             >
               <Ionicons
                 name="person-outline"
@@ -228,7 +306,7 @@ export default function RegisterScreen() {
             </Pressable>
             <Pressable
               style={[styles.typeButton, userType === 'developer' && styles.typeButtonSelected]}
-              onPress={() => setUserType('developer')}
+              onPress={() => { setUserType('developer'); setCpfCnpj(''); setErrors(prev => ({ ...prev, cpfCnpj: undefined })); }}
             >
               <Ionicons
                 name="code-slash-outline"
@@ -240,6 +318,16 @@ export default function RegisterScreen() {
               </Text>
             </Pressable>
           </View>
+
+          <Input
+            label={userType === 'developer' ? 'CPF' : 'CNPJ'}
+            value={cpfCnpj}
+            onChangeText={(v) => setCpfCnpj(userType === 'developer' ? maskCPF(v) : maskCNPJ(v))}
+            keyboardType="numeric"
+            placeholder={userType === 'developer' ? '000.000.000-00' : '00.000.000/0000-00'}
+            error={e.cpfCnpj}
+            maxLength={userType === 'developer' ? 14 : 18}
+          />
 
           <Pressable style={styles.termsRow} onPress={() => setTermsAccepted(!termsAccepted)}>
             <Ionicons

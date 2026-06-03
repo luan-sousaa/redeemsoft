@@ -17,6 +17,8 @@ export default function AppLayout() {
       <Stack.Screen name="buscar-desenvolvedores" />
       <Stack.Screen name="desenvolvedor-detalhe" />
       <Stack.Screen name="chat-conversa" />
+      <Stack.Screen name="checkout" />
+      <Stack.Screen name="pagamento-pix" />
     </Stack>
   );
 }

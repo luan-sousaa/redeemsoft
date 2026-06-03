@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   Dimensions,
   KeyboardAvoidingView,
   Platform,
@@ -14,10 +16,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
-
 import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAvatar } from '@/hooks/use-avatar';
+import Head from 'expo-router/head';  
 
 const { width } = Dimensions.get('window');
 const GRID_GAP = 12;
@@ -43,6 +46,7 @@ function ProjetoCell({ index, imageUri }: { index: number; imageUri?: string }) 
 export default function SobreMimScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const { avatarUri, pickAvatar, isPickerLoading } = useAvatar();
 
   const [sobre, setSobre] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -62,6 +66,10 @@ export default function SobreMimScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <Head>
+                    <title> Sobre Mim | RedeemSoft</title>
+                    <meta name="description" content="Seu perfil no RedeemSoft" />
+                  </Head>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -72,7 +80,7 @@ export default function SobreMimScreen() {
             <Ionicons name="arrow-back-circle-outline" size={30} color={Colors.text} />
           </Pressable>
           <Text style={styles.headerTitle} numberOfLines={1}>
-            {user?.name ?? 'Nome Prestador'}
+            {user?.nome ?? 'Nome Prestador'}
           </Text>
         </View>
 
@@ -83,12 +91,22 @@ export default function SobreMimScreen() {
         >
           {/* Foto */}
           <View style={styles.photoSection}>
-            <Pressable style={styles.photoContainer}>
-              <View style={styles.photoPlaceholder}>
-                <Ionicons name="camera-outline" size={32} color={Colors.textSecondary} />
-                <Text style={styles.photoLabel}>Foto</Text>
-              </View>
+            <Pressable style={styles.photoContainer} onPress={pickAvatar} disabled={isPickerLoading}>
+              {avatarUri ? (
+                <Image source={{ uri: avatarUri }} style={styles.photoImage} contentFit="cover" />
+              ) : (
+                <View style={styles.photoPlaceholder}>
+                  <Ionicons name="camera-outline" size={32} color={Colors.textSecondary} />
+                  <Text style={styles.photoLabel}>Foto</Text>
+                </View>
+              )}
+              {isPickerLoading && (
+                <View style={styles.photoOverlay}>
+                  <ActivityIndicator color={Colors.primary} />
+                </View>
+              )}
             </Pressable>
+            <Text style={styles.photoHint}>Toque para alterar</Text>
           </View>
 
           {/* Sobre */}
@@ -178,6 +196,10 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     borderStyle: 'dashed',
   },
+  photoImage: {
+    width: '100%',
+    height: '100%',
+  },
   photoPlaceholder: {
     flex: 1,
     alignItems: 'center',
@@ -188,6 +210,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textSecondary,
     fontWeight: '500',
+  },
+  photoOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoHint: {
+    marginTop: 8,
+    fontSize: 12,
+    color: Colors.textSecondary,
   },
 
   // Sobre

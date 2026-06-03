@@ -3,13 +3,16 @@ import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Image } from 'expo-image';
 import { Logo } from '@/components/Logo';
 import { DrawerMenu } from '@/components/DrawerMenu';
 import { Colors } from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
-
+import { useAvatar } from '@/hooks/use-avatar';
+import Head from 'expo-router/head';
 // ─── Quick-access card ────────────────────────────────────────────────────────
 
 function AcessoCard({
@@ -48,35 +51,47 @@ function HomeDev() {
   const router = useRouter();
   return (
     <>
-      <View style={styles.sectionHeader}>
-        <Ionicons name="flash-outline" size={16} color={Colors.primary} />
-        <Text style={styles.sectionTitle}>Acesso rápido</Text>
-      </View>
-
-      <AcessoCard
-        icon="storefront-outline"
-        title="Marketplace"
-        description="Encontre projetos legados e vibecodados para trabalhar"
-        onPress={() => router.push('/(app)/marketplace' as Href)}
-        highlight
-      />
-
-      <AcessoCard
-        icon="document-text-outline"
-        title="Minhas Candidaturas"
-        description="Acompanhe o status das suas propostas enviadas"
-        onPress={() => router.push('/(app)/minhas-candidaturas' as Href)}
-      />
-
-      <View style={styles.tipCard}>
-        <Ionicons name="bulb-outline" size={20} color={Colors.primary} />
-        <View style={{ flex: 1 }}>
-          <Text style={styles.tipTitle}>Como funciona para devs</Text>
-          <Text style={styles.tipText}>
-            Navegue pelo marketplace, escolha projetos com a sua stack, envie sua proposta com prazo e valor. A empresa avalia e entra em contato.
-          </Text>
+      <Animated.View entering={FadeInUp.delay(0).duration(350)}>
+         <Head>
+                    <title> Home | RedeemSoft</title>
+                    <meta name="description" content="Página inicial do RedeemSoft" />
+                  </Head>
+        <View style={styles.sectionHeader}>
+          <Ionicons name="flash-outline" size={16} color={Colors.primary} />
+          <Text style={styles.sectionTitle}>Acesso rápido</Text>
         </View>
-      </View>
+      </Animated.View>
+
+      <Animated.View entering={FadeInUp.delay(80).duration(350)}>
+        <AcessoCard
+          icon="storefront-outline"
+          title="Marketplace"
+          description="Encontre projetos legados e vibecodados para trabalhar"
+          onPress={() => router.push('/(app)/marketplace' as Href)}
+          highlight
+        />
+      </Animated.View>
+
+      <Animated.View entering={FadeInUp.delay(160).duration(350)}>
+        <AcessoCard
+          icon="document-text-outline"
+          title="Minhas Candidaturas"
+          description="Acompanhe o status das suas propostas enviadas"
+          onPress={() => router.push('/(app)/minhas-candidaturas' as Href)}
+        />
+      </Animated.View>
+
+      <Animated.View entering={FadeInUp.delay(240).duration(350)}>
+        <View style={styles.tipCard}>
+          <Ionicons name="bulb-outline" size={20} color={Colors.primary} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.tipTitle}>Como funciona para devs</Text>
+            <Text style={styles.tipText}>
+              Navegue pelo marketplace, escolha projetos com a sua stack, envie sua proposta com prazo e valor. A empresa avalia e entra em contato.
+            </Text>
+          </View>
+        </View>
+      </Animated.View>
     </>
   );
 }
@@ -86,43 +101,58 @@ function HomeDev() {
 function HomeEmpresa() {
   const router = useRouter();
   return (
+    
     <>
-      <View style={styles.sectionHeader}>
-        <Ionicons name="flash-outline" size={16} color={Colors.primary} />
-        <Text style={styles.sectionTitle}>Acesso rápido</Text>
-      </View>
-
-      <AcessoCard
-        icon="search-outline"
-        title="Buscar Desenvolvedores"
-        description="Encontre devs especializados em sistemas legados e vibecodados"
-        onPress={() => router.push('/(app)/buscar-desenvolvedores' as Href)}
-        highlight
-      />
-
-      <AcessoCard
-        icon="document-text-outline"
-        title="Minhas Solicitações"
-        description="Veja candidatos e gerencie os projetos que você publicou"
-        onPress={() => router.push('/(app)/meus-projetos' as Href)}
-      />
-
-      <AcessoCard
-        icon="add-circle-outline"
-        title="Nova Solicitação"
-        description="Publique um sistema legado e encontre o dev certo"
-        onPress={() => router.push('/(app)/criar-projeto' as Href)}
-      />
-
-      <View style={styles.tipCard}>
-        <Ionicons name="bulb-outline" size={20} color={Colors.primary} />
-        <View style={{ flex: 1 }}>
-          <Text style={styles.tipTitle}>Como funciona para empresas</Text>
-          <Text style={styles.tipText}>
-            Publique um projeto descrevendo seu sistema, orçamento e prazo. Desenvolvedores se candidatam e você escolhe o melhor perfil.
-          </Text>
+      <Animated.View entering={FadeInUp.delay(0).duration(350)}>
+        <Head>
+                    <title> Home | RedeemSoft</title>
+                    <meta name="description" content="Página inicial do RedeemSoft" />
+                  </Head>
+        <View style={styles.sectionHeader}>
+          <Ionicons name="flash-outline" size={16} color={Colors.primary} />
+          <Text style={styles.sectionTitle}>Acesso rápido</Text>
         </View>
-      </View>
+      </Animated.View>
+
+      <Animated.View entering={FadeInUp.delay(80).duration(350)}>
+        <AcessoCard
+          icon="search-outline"
+          title="Buscar Desenvolvedores"
+          description="Encontre devs especializados em sistemas legados e vibecodados"
+          onPress={() => router.push('/(app)/buscar-desenvolvedores' as Href)}
+          highlight
+        />
+      </Animated.View>
+
+      <Animated.View entering={FadeInUp.delay(160).duration(350)}>
+        <AcessoCard
+          icon="document-text-outline"
+          title="Minhas Solicitações"
+          description="Veja candidatos e gerencie os projetos que você publicou"
+          onPress={() => router.push('/(app)/meus-projetos' as Href)}
+        />
+      </Animated.View>
+
+      <Animated.View entering={FadeInUp.delay(240).duration(350)}>
+        <AcessoCard
+          icon="add-circle-outline"
+          title="Nova Solicitação"
+          description="Publique um sistema legado e encontre o dev certo"
+          onPress={() => router.push('/(app)/criar-projeto' as Href)}
+        />
+      </Animated.View>
+
+      <Animated.View entering={FadeInUp.delay(320).duration(350)}>
+        <View style={styles.tipCard}>
+          <Ionicons name="bulb-outline" size={20} color={Colors.primary} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.tipTitle}>Como funciona para empresas</Text>
+            <Text style={styles.tipText}>
+              Publique um projeto descrevendo seu sistema, orçamento e prazo. Desenvolvedores se candidatam e você escolhe o melhor perfil.
+            </Text>
+          </View>
+        </View>
+      </Animated.View>
     </>
   );
 }
@@ -135,31 +165,24 @@ export default function HomeScreen() {
 
   const isDev = user?.type === 'developer';
   const typeLabel = isDev ? 'Desenvolvedor' : 'Empresa';
-  const avatarLetter = user?.name?.charAt(0).toUpperCase() ?? '?';
+  const avatarLetter = user?.nome?.charAt(0).toUpperCase() ?? '?';
+  const { avatarUri } = useAvatar();
 
   return (
     <SafeAreaView style={styles.safe}>
-      {/* Drawer menu (empresa) */}
-      {!isDev && (
-        <DrawerMenu
-          visible={drawerOpen}
-          onClose={() => setDrawerOpen(false)}
-          activeScreen="home"
-        />
-      )}
+      <DrawerMenu
+        visible={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        activeScreen="home"
+      />
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
         {/* Top bar */}
         <View style={styles.topBar}>
-          {/* Botão sanduiche apenas para empresa */}
-          {isDev ? (
-            <Logo size="sm" />
-          ) : (
-            <Pressable style={styles.menuBtn} onPress={() => setDrawerOpen(true)}>
-              <Ionicons name="menu-outline" size={28} color={Colors.text} />
-            </Pressable>
-          )}
+          <Pressable style={styles.menuBtn} onPress={() => setDrawerOpen(true)}>
+            <Ionicons name="menu-outline" size={28} color={Colors.text} />
+          </Pressable>
           <Pressable style={styles.logoutButton} onPress={logout}>
             <Ionicons name="log-out-outline" size={24} color={Colors.textSecondary} />
           </Pressable>
@@ -168,9 +191,13 @@ export default function HomeScreen() {
         {/* Perfil */}
         <View style={styles.profileSection}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarLetter}>{avatarLetter}</Text>
+            {avatarUri ? (
+              <Image source={{ uri: avatarUri }} style={styles.avatarImage} contentFit="cover" />
+            ) : (
+              <Text style={styles.avatarLetter}>{avatarLetter}</Text>
+            )}
           </View>
-          <Text style={styles.userName}>Olá, {user?.name}</Text>
+          <Text style={styles.userName}>Olá, {user?.nome}</Text>
           <View style={[styles.typeBadge, isDev ? styles.typeBadgeDev : styles.typeBadgeEmpresa]}>
             <Ionicons
               name={isDev ? 'code-slash-outline' : 'business-outline'}
@@ -206,6 +233,11 @@ const styles = StyleSheet.create({
   menuBtn: { padding: 4 },
 
   profileSection: { alignItems: 'center', marginBottom: 32 },
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
   avatar: {
     width: 80,
     height: 80,

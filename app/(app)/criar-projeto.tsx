@@ -18,10 +18,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Colors } from '@/constants/colors';
 import { authService } from '@/services/authService';
-import { projetoService } from '@/services/projetoService';
-import { useAuth } from '@/contexts/AuthContext';
-
-
+import Head from 'expo-router/head';
 type Modalidade = 'P' | 'SP' | 'H';
 
 const MODALIDADES: { key: Modalidade; label: string; desc: string }[] = [
@@ -31,7 +28,6 @@ const MODALIDADES: { key: Modalidade; label: string; desc: string }[] = [
 ];
 
 export default function CriarProjetoScreen() {
-  const { user } = useAuth();
   const router = useRouter();
 
   const [titulo, setTitulo] = useState('');
@@ -66,18 +62,12 @@ export default function CriarProjetoScreen() {
   }
 
   async function handleCriar() {
-
-    
     setHasSubmitted(true);
     if (!validate()) return;
 
     setIsLoading(true);
     try {
-
-          console.log("🛠️ DADOS DO USUÁRIO NO FRONT-END:", user);
-
-      await projetoService.criarProjeto({
-        idCliente: user?.idUsuario,
+      await authService.criarProjeto({
         titulo: titulo.trim(),
         descricao: descricao.trim(),
         orcamento: Number(orcamento.replace(/\D/g, '')),
@@ -102,6 +92,10 @@ export default function CriarProjetoScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <Head>
+                          <title> Novo Projeto | RedeemSoft</title>
+                          <meta name="description" content="Crie um novo projeto no RedeemSoft" />
+                        </Head>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -303,7 +297,7 @@ const styles = StyleSheet.create({
   },
   chipLabelAtivo: { color: Colors.text },
   chipDesc: {
-    fontSize: 10,
+    fontSize: 9,
     color: Colors.textSecondary,
     fontWeight: '500',
   },

@@ -15,90 +15,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Logo } from '@/components/Logo';
 import { DrawerMenu } from '@/components/DrawerMenu';
 import { Colors } from '@/constants/colors';
+import {ProjetoEmpresa} from '../../services/authService'
 
-// ─── Tipos ────────────────────────────────────────────────────────────────────
-
-type Modalidade = 'P' | 'SP' | 'H';
-
-type Projeto = {
-  id: string;
-  titulo: string;
-  descricao: string;
-  preco: number;
-  prazo: string; // ex: "30 dias"
-  modalidades: Modalidade[];
-  stack: string;
-  dataCadastro: Date;
-};
-
-// ─── Mock de projetos ─────────────────────────────────────────────────────────
-
-const PROJETOS_MOCK: Projeto[] = [
-  {
-    id: '1',
-    titulo: 'Sistema PDV em Delphi 2005',
-    descricao: 'PDV legado de rede de farmácias. Necessita migração para React Native + Node. Banco em Firebird 1.5.',
-    preco: 8500,
-    prazo: '45 dias',
-    modalidades: ['H', 'SP'],
-    stack: 'Delphi → React Native',
-    dataCadastro: new Date('2025-03-10'),
-  },
-  {
-    id: '2',
-    titulo: 'E-commerce PHP 5.2 sem suporte',
-    descricao: 'Loja virtual vibecodada em 2009. SSL quebrado, sem suporte a pagamento PIX. Urgente atualização de segurança.',
-    preco: 4200,
-    prazo: '20 dias',
-    modalidades: ['H'],
-    stack: 'PHP 5.2 → Laravel 11',
-    dataCadastro: new Date('2025-03-18'),
-  },
-  {
-    id: '3',
-    titulo: 'App de Delivery vibecodado com IA',
-    descricao: 'App criado em 2 dias com ChatGPT. Crashes frequentes no checkout, rotas de entrega quebradas e sem testes.',
-    preco: 6000,
-    prazo: '30 dias',
-    modalidades: ['P', 'SP', 'H'],
-    stack: 'React Native (bugado)',
-    dataCadastro: new Date('2025-03-22'),
-  },
-  {
-    id: '4',
-    titulo: 'ERP corporativo em Access 2003',
-    descricao: 'Sistema de gestão de estoque e RH rodando em Access 2003. Empresa com 80 funcionários precisa de modernização urgente.',
-    preco: 22000,
-    prazo: '90 dias',
-    modalidades: ['P', 'SP'],
-    stack: 'MS Access → Next.js + Postgres',
-    dataCadastro: new Date('2025-03-05'),
-  },
-  {
-    id: '5',
-    titulo: 'Sistema RH em VB.NET 2008',
-    descricao: 'Folha de pagamento e ponto eletrônico em VB.NET. Incompatível com Windows 11, travamentos diários no fechamento mensal.',
-    preco: 12000,
-    prazo: '60 dias',
-    modalidades: ['SP', 'H'],
-    stack: 'VB.NET → C# .NET 8',
-    dataCadastro: new Date('2025-03-28'),
-  },
-  {
-    id: '6',
-    titulo: 'Portal de agendamentos jQuery antigo',
-    descricao: 'Clínica médica com sistema de agendamento em jQuery 1.4 e IE-only. Precisa de PWA moderno com notificações push.',
-    preco: 5500,
-    prazo: '25 dias',
-    modalidades: ['H'],
-    stack: 'jQuery 1.4 → React PWA',
-    dataCadastro: new Date('2025-04-01'),
-  },
+// Modalidades disponíveis (chaves usadas em ProjetoEmpresa.modalidades)
+const MODALIDADES: { key: string; label: string }[] = [
+  { key: 'remoto', label: 'Remoto' },
+  { key: 'presencial', label: 'Presencial' },
+  { key: 'hibrido', label: 'Híbrido' },
 ];
 
 // ─── Componente de Card ───────────────────────────────────────────────────────
 
-function ProjetoCard({ projeto, onPress }: { projeto: Projeto; onPress: () => void }) {
+function ProjetoCard({ projeto, onPress }: { projeto: ProjetoEmpresa; onPress: () => void }) {
   return (
     <Pressable
       style={styles.card}
@@ -113,7 +41,7 @@ function ProjetoCard({ projeto, onPress }: { projeto: Projeto; onPress: () => vo
         </View>
         <View style={styles.precoTag}>
           <Text style={styles.precoText}>
-            {projeto.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
+            {projeto.orcamento.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
           </Text>
         </View>
       </View>
@@ -152,16 +80,10 @@ export default function MarketplaceScreen() {
   const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [busca, setBusca] = useState('');
-  const [filtroModalidade, setFiltroModalidade] = useState<Modalidade[]>([]);
+  const [filtroModalidade, setFiltroModalidade] = useState<ProjetoEmpresa['modalidades']>([]);
   const [filtroData, setFiltroData] = useState<'recente' | 'antigo' | null>(null);
 
-  const MODALIDADES: { key: Modalidade; label: string; tooltip: string }[] = [
-    { key: 'P', label: 'P', tooltip: 'Presencial' },
-    { key: 'SP', label: 'SP', tooltip: 'Semi-presencial' },
-    { key: 'H', label: 'H', tooltip: 'Home Office' },
-  ];
-
-  function toggleModalidade(m: Modalidade) {
+  function toggleModalidade(m: ProjetoEmpresa['modalidades'][number]) {
     setFiltroModalidade((prev) =>
       prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m]
     );
@@ -176,7 +98,7 @@ export default function MarketplaceScreen() {
   }
 
   const projetosFiltrados = useMemo(() => {
-    let lista = [...PROJETOS_MOCK];
+    let lista = [] as ProjetoEmpresa[];
 
     if (busca.trim()) {
       const termo = busca.toLowerCase();
@@ -195,9 +117,9 @@ export default function MarketplaceScreen() {
     }
 
     if (filtroData === 'recente') {
-      lista.sort((a, b) => b.dataCadastro.getTime() - a.dataCadastro.getTime());
+      lista.sort((a, b) => b.dataCriacao.getTime() - a.dataCriacao.getTime());
     } else if (filtroData === 'antigo') {
-      lista.sort((a, b) => a.dataCadastro.getTime() - b.dataCadastro.getTime());
+      lista.sort((a, b) => a.dataCriacao.getTime() - b.dataCriacao.getTime());
     }
 
     return lista;
@@ -302,7 +224,7 @@ export default function MarketplaceScreen() {
                   id: item.id,
                   titulo: item.titulo,
                   descricao: item.descricao,
-                  preco: String(item.preco),
+                  preco: String(item.orcamento),
                   prazo: item.prazo,
                   stack: item.stack,
                   modalidades: JSON.stringify(item.modalidades),

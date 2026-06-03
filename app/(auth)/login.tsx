@@ -22,20 +22,20 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Colors } from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
-
-WebBrowser.maybeCompleteAuthSession();
+import { authService } from '@/services/authService';
+import Head from 'expo-router/head';
 
 export default function LoginScreen() {
   const router = useRouter();
   const { login, loginWithGoogle } = useAuth();
 
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [senha, setsenha] = useState('');
+  const [showsenha, setShowsenha] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; senha?: string }>({});
 
   const extra = Constants.expoConfig?.extra ?? {};
   const webClientId: string = extra.googleWebClientId ?? '';
@@ -48,6 +48,15 @@ export default function LoginScreen() {
     androidClientId,
     iosClientId,
   });
+
+  interface ValidationErrors {
+    email?: string;
+    senha?: string;
+  }
+
+  interface LoginResponse {
+    [key: string]: unknown;
+  }
 
   useEffect(() => {
     if (response?.type === 'success') {
@@ -67,31 +76,34 @@ export default function LoginScreen() {
   }, [response]);
 
   function validate(): boolean {
-    const newErrors: typeof errors = {};
+    const newErrors: ValidationErrors = {};
     if (!email) newErrors.email = 'E-mail é obrigatório';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) newErrors.email = 'E-mail inválido';
-    if (!password) newErrors.password = 'Senha é obrigatória';
-    else if (password.length < 6) newErrors.password = 'Senha deve ter ao menos 6 caracteres';
+    if (!senha) newErrors.senha = 'Senha é obrigatória';
+    else if (senha.length < 6) newErrors.senha = 'Senha deve ter ao menos 6 caracteres';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }
 
-  async function handleLogin() {
-    setHasSubmitted(true);
-    if (!validate()) return;
-    setIsLoading(true);
-    try {
-      await login(email, password);
-    } catch (e: unknown) {
-      Toast.show({
-        type: 'error',
-        text1: 'Erro ao entrar',
-        text2: e instanceof Error ? e.message : 'Tente novamente.',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+
+async function handleLogin() {
+  try {
+
+    await login(email, senha);
+
+    console.log('Login feito com sucesso!');
+
+    router.replace('/(app)/sobre-mim' as Href);
+
+  } catch (error: unknown) {
+
+    Toast.show({
+      type: 'error',
+      text1: 'Erro ao entrar',
+      text2: error instanceof Error ? error.message : 'Ocorreu um erro inesperado',
+    });
   }
+}
 
   async function handleGoogleLogin() {
     if (!isGoogleConfigured) {
@@ -131,10 +143,14 @@ export default function LoginScreen() {
   }
 
   const emailError = hasSubmitted ? errors.email : undefined;
-  const passwordError = hasSubmitted ? errors.password : undefined;
+  const senhaError = hasSubmitted ? errors.senha : undefined;
 
   return (
     <SafeAreaView style={styles.safe}>
+       <Head>
+              <title> Entre | RedeemSoft</title>
+              <meta name="description" content="Entre na sua conta no RedeemSoft" />
+            </Head>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -165,15 +181,15 @@ export default function LoginScreen() {
 
             <Input
               label="Senha"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
+              value={senha}
+              onChangeText={setsenha}
+              secureTextEntry={!showsenha}
               placeholder="••••••••"
-              error={passwordError}
+              error={senhaError}
               rightIcon={
-                <Pressable onPress={() => setShowPassword(!showPassword)}>
+                <Pressable onPress={() => setShowsenha(!showsenha)}>
                   <Ionicons
-                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                    name={showsenha ? 'eye-off-outline' : 'eye-outline'}
                     size={22}
                     color={Colors.textSecondary}
                   />
@@ -184,7 +200,7 @@ export default function LoginScreen() {
 
           <Pressable
             style={styles.forgotLink}
-            onPress={() => router.push('/(auth)/forgot-password' as Href)}
+            onPress={() => router.push('/(auth)/forgot-senha' as Href)}
           >
             <Text style={styles.linkText}>Esqueci minha senha</Text>
           </Pressable>

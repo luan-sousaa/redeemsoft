@@ -14,9 +14,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
-
 import { Colors } from '@/constants/colors';
-import { authService, type Candidatura, type Desenvolvedor, type ProjetoEmpresa } from '@/services/authService';
+import { CandidaturaDetalhada, Desenvolvedor, ProjetoEmpresa , Aplicacao} from '@/types';
+import { projetoService } from '@/services/projetoService';
+import Head from 'expo-router/head';
 
 // ─── Status labels ─────────────────────────────────────────────────────────────
 
@@ -45,19 +46,22 @@ function CandidatosModal({
   onClose: () => void;
   onUpdate: () => void;
 }) {
-  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const router = useRouter();
+  const [loadingId, setLoadingId] = useState<number | null>(null);
+  const devMap = Object.fromEntries(desenvolvedores.map((d) => [d.idDev, d]));
 
-  const devMap = Object.fromEntries(desenvolvedores.map((d) => [d.id, d]));
+  async function handleRecusar(cand: CandidaturaDetalhada) {
 
-  async function handleStatus(cand: Candidatura, status: 'aceito' | 'recusado') {
-    setLoadingId(cand.id);
-    const dev = devMap[cand.desenvolvedorId];
+    setLoadingId(cand.idAplicacao);
+    const dev = devMap[cand.idDev];
+
     try {
-      await authService.atualizarStatusCandidatura(projeto.id, cand.id, status);
+
+      await projetoService.atualizarStatusCandidatura(projeto.idProjeto, cand.idAplicacao, 'recusado');
       Toast.show({
         type: 'success',
-        text1: status === 'aceito' ? 'Candidato aceito!' : 'Candidato recusado',
-        text2: `${dev?.nome ?? 'Desenvolvedor'} foi ${status === 'aceito' ? 'aceito' : 'recusado'} com sucesso.`,
+        text1: 'Candidato recusado',
+        text2: `${dev?.nome ?? 'Desenvolvedor'} foi recusado.`,
       });
       onUpdate();
     } catch {
@@ -65,6 +69,20 @@ function CandidatosModal({
     } finally {
       setLoadingId(null);
     }
+  }
+
+  function handleContratar(cand: CandidaturaDetalhada) {
+    const dev = devMap[cand.idDev];
+    onClose();
+    router.push({
+      pathname: '/(app)/checkout' as any,
+      params: {
+        amount: String(cand.proposta ? cand.proposta * 100 : 0),
+        description: `Contratar ${dev?.nome ?? 'desenvolvedor'} — ${projeto.titulo}`,
+        projetoId: projeto.idProjeto,
+        candidaturaId: cand.idAplicacao,
+      },
+    });
   }
 
   return (
@@ -93,37 +111,37 @@ function CandidatosModal({
           <ScrollView contentContainerStyle={modal.list} showsVerticalScrollIndicator={false}>
             {projeto.candidaturas.map((cand) => {
               const cfg = CAND_STATUS_CONFIG[cand.status];
-              const isLoading = loadingId === cand.id;
-              const dev = devMap[cand.desenvolvedorId];
+              const isLoading = loadingId === cand.idDev;
+              const dev = devMap[cand.idDev];
               return (
-                <View key={cand.id} style={modal.card}>
+                <View key={cand.idDev} style={modal.card}>
                   {/* Cabeçalho do candidato */}
                   <View style={modal.cardHeader}>
                     <View style={modal.avatar}>
                       <Text style={modal.avatarLetter}>{dev?.nome.charAt(0) ?? '?'}</Text>
                     </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={modal.candName}>{dev?.nome ?? 'Desconhecido'}</Text>
-                      <Text style={modal.candEmail}>{dev?.descricao ?? ''}</Text>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={modal.candName} numberOfLines={1}>{dev?.nome ?? 'Desconhecido'}</Text>
+                      <Text style={modal.candEmail} numberOfLines={1}>{dev?.email ?? 'Sem e-mail'}</Text>                    
                     </View>
-                    <View style={[modal.statusBadge, { backgroundColor: cfg.bg }]}>
+                    <View style={[modal.statusBadge, { backgroundColor: cfg.bg, flexShrink: 0 }]}>
                       <Text style={[modal.statusText, { color: cfg.color }]}>{cfg.label}</Text>
                     </View>
                   </View>
 
                   {/* Detalhes */}
-                  <Text style={modal.experiencia}>{cand.experiencia}</Text>
+                  <Text style={modal.experiencia} numberOfLines={2}>{cand.desenvolvedor?.experiencia ?? 'Sem experiência informada'}</Text>
 
                   <View style={modal.detailsRow}>
                     <View style={modal.detail}>
                       <Ionicons name="cash-outline" size={14} color={Colors.primary} />
-                      <Text style={modal.detailText}>
-                        {cand.proposta.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
+                      <Text style={modal.detailText} numberOfLines={1}>
+                        {cand.proposta?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
                       </Text>
                     </View>
                     <View style={modal.detail}>
                       <Ionicons name="time-outline" size={14} color={Colors.primary} />
-                      <Text style={modal.detailText}>{cand.prazo}</Text>
+                      <Text style={modal.detailText} numberOfLines={1}>{cand.projeto?.prazo ?? 'Prazo não informado'}</Text>
                     </View>
                   </View>
 
@@ -135,18 +153,18 @@ function CandidatosModal({
                       ) : (
                         <>
                           <Pressable
+                            style={[modal.actionBtn, modal.actionAceitar]}
+                            onPress={() => handleContratar(cand)}
+                          >
+                            <Ionicons name="card-outline" size={16} color={Colors.text} />
+                            <Text style={modal.actionText}>Pagar e Contratar</Text>
+                          </Pressable>
+                          <Pressable
                             style={[modal.actionBtn, modal.actionRecusar]}
-                            onPress={() => handleStatus(cand, 'recusado')}
+                            onPress={() => handleRecusar(cand)}
                           >
                             <Ionicons name="close" size={16} color={Colors.error} />
                             <Text style={[modal.actionText, { color: Colors.error }]}>Recusar</Text>
-                          </Pressable>
-                          <Pressable
-                            style={[modal.actionBtn, modal.actionAceitar]}
-                            onPress={() => handleStatus(cand, 'aceito')}
-                          >
-                            <Ionicons name="checkmark" size={16} color={Colors.text} />
-                            <Text style={modal.actionText}>Contratar</Text>
                           </Pressable>
                         </>
                       )}
@@ -214,6 +232,7 @@ function ProjetoCard({
           </Text>
         </Pressable>
       </View>
+
     </View>
   );
 }
@@ -227,15 +246,15 @@ export default function MeusProjetosScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [projetoSelecionado, setProjetoSelecionado] = useState<ProjetoEmpresa | null>(null);
 
-  const carregar = useCallback(async () => {
+const carregar = useCallback(async () => {
     try {
-      const [data, devs] = await Promise.all([
-        authService.getProjetosEmpresa(),
-        authService.getDesenvolvedores(),
-      ]);
+      setIsLoading(true);
+      
+      const data = await projetoService.obterProjetos();
+      
       setProjetos(data);
-      setDesenvolvedores(devs);
-    } catch {
+      
+    } catch (error) {
       Toast.show({ type: 'error', text1: 'Erro ao carregar projetos' });
     } finally {
       setIsLoading(false);
@@ -251,6 +270,11 @@ export default function MeusProjetosScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+
+       <Head>
+                    <title> Minhas Solicitações | RedeemSoft</title>
+                    <meta name="description" content="Veja suas solicitações de projeto no RedeemSoft" />
+                  </Head>
       {/* Header */}
       <View style={styles.header}>
         <Pressable style={styles.backBtn} onPress={() => router.back()}>
@@ -279,7 +303,7 @@ export default function MeusProjetosScreen() {
       ) : (
         <FlatList
           data={projetos}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.idProjeto.toString()}
           contentContainerStyle={styles.lista}
           showsVerticalScrollIndicator={false}
           ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
@@ -317,7 +341,7 @@ export default function MeusProjetosScreen() {
   );
 }
 
-// ─── Estilos ────────────────────────────────────────────────────────────────────
+// ─── Estilos (Mantidos Exatamente Iguais) ──────────────────────────────────────
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
@@ -372,9 +396,9 @@ const styles = StyleSheet.create({
   },
   orcamentoText: { fontSize: 13, fontWeight: '700', color: Colors.text },
   cardDesc: { fontSize: 13, color: Colors.textSecondary, lineHeight: 20, marginBottom: 12 },
-  cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  footerInfo: { flexDirection: 'row', alignItems: 'center', gap: 5, flex: 1 },
-  footerText: { fontSize: 12, color: Colors.textSecondary, flexShrink: 1 },
+  cardFooter: { flexDirection: 'column', gap: 25 },
+  footerInfo: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  footerText: { fontSize: 9, color: Colors.textSecondary, flexShrink: 1 },
   dot: { width: 3, height: 3, borderRadius: 2, backgroundColor: Colors.border },
   candBtn: {
     flexDirection: 'row',
@@ -384,6 +408,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
+    alignSelf: 'flex-start',
   },
   candBtnText: { fontSize: 12, color: Colors.primary, fontWeight: '600' },
   badge: {
@@ -466,21 +491,20 @@ const modal = StyleSheet.create({
   },
   statusText: { fontSize: 11, fontWeight: '700' },
   experiencia: { fontSize: 13, color: Colors.textSecondary, lineHeight: 20 },
-  detailsRow: { flexDirection: 'row', gap: 16 },
-  detail: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  detailText: { fontSize: 13, color: Colors.text, fontWeight: '600' },
-  actions: { flexDirection: 'row', gap: 10, paddingTop: 4 },
+  detailsRow: { flexDirection: 'row', gap: 16, flexWrap: 'wrap' },
+  detail: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
+  detailText: { fontSize: 13, color: Colors.text, fontWeight: '600', flexShrink: 1 },
+  actions: { flexDirection: 'column', gap: 8, paddingTop: 4 },
   actionBtn: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 10,
+    paddingVertical: 11,
     borderRadius: 10,
     borderWidth: 1.5,
   },
   actionRecusar: { borderColor: Colors.error, backgroundColor: 'rgba(232,69,96,0.08)' },
   actionAceitar: { borderColor: Colors.primary, backgroundColor: Colors.primary },
-  actionText: { fontSize: 13, fontWeight: '700', color: Colors.text },
+  actionText: { fontSize: 14, fontWeight: '700', color: Colors.text },
 });

@@ -13,10 +13,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
-
 import { Colors } from '@/constants/colors';
 import { authService } from '@/services/authService';
-
 // ─── Campo somente-leitura (estilo do protótipo) ──────────────────────────────
 
 function ReadonlyField({
@@ -89,9 +87,17 @@ export default function ProjetoDetalheScreen() {
 
   // Check on mount whether the developer already applied
   useEffect(() => {
-    if (params.id) {
-      setAceito(authService.jaCandidatou(params.id));
+    async function checkCandidatura() {
+      if (!params.id) return;
+      try {
+        const resultado = await authService.jaCandidatou(params.id);
+        setAceito(resultado);
+      } catch {
+        setAceito(false);
+      }
     }
+
+    checkCandidatura();
   }, [params.id]);
 
   const precoFormatado = params.preco

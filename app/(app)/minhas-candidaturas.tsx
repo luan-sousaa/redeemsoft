@@ -13,7 +13,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors } from '@/constants/colors';
-import { authService, type MinhaCandidatura } from '@/services/authService';
+import { authService } from '@/services/authService';
+import Head from 'expo-router/head';
+import { MinhaCandidatura } from '@/types';
+
 
 // ─── Config de status ─────────────────────────────────────────────────────────
 
@@ -104,7 +107,18 @@ export default function MinhasCandidaturasScreen() {
     setIsLoading(true);
     try {
       const data = await authService.getMinhaCandidaturas();
-      setCandidaturas(data);
+
+      const mapped: MinhaCandidatura[] = (data as any[]).map((d) => ({
+        candidaturaId: String(d.idAplicacao ?? d.candidaturaId ?? ''),
+        titulo: d.projetoTitulo ?? d.titulo ?? '',
+        stack: d.projetoStack ?? d.stack ?? '',
+        prazo: String(d.projetoPrazo ?? d.prazo ?? ''),
+        preco: d.proposta ?? d.preco ?? 0,
+        status: (d.statusAplicacao ?? d.status) as MinhaCandidatura['status'] || 'pendente',
+        dataEnvio: d.dataEnvio ? new Date(d.dataEnvio) : new Date(),
+      }));
+
+      setCandidaturas(mapped);
     } finally {
       setIsLoading(false);
     }
@@ -117,6 +131,11 @@ export default function MinhasCandidaturasScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+
+       <Head>
+              <title> Minhas Candidaturas | RedeemSoft</title>
+              <meta name="description" content="Veja suas candidaturas no RedeemSoft" />
+            </Head>
       {/* Header */}
       <View style={styles.header}>
         <Pressable style={styles.backBtn} onPress={() => router.back()}>

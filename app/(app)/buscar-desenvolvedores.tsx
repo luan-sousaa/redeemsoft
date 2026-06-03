@@ -13,7 +13,18 @@ import { Href, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors } from '@/constants/colors';
-import { authService, Desenvolvedor } from '@/services/authService';
+import { authService} from '@/services/authService';
+
+type Desenvolvedor = {
+  id: string;
+  nome: string;
+  precoPorHora: number;
+  descricao: string;
+  sobreMim: string;
+  habilidades: string;
+  certificacoes: string;
+  projetos: any[];
+};
 
 // ─── Card do desenvolvedor ────────────────────────────────────────────────────
 
@@ -44,16 +55,22 @@ function DevCard({
       </Text>
 
       {/* Habilidades (primeiras 3) */}
-      <View style={styles.chips}>
-        {dev.habilidades
-          .split(',')
-          .slice(0, 3)
-          .map((h) => (
-            <View key={h.trim()} style={styles.chip}>
-              <Text style={styles.chipText}>{h.trim()}</Text>
-            </View>
-          ))}
-      </View>
+      {/* Habilidades (primeiras 3) */}
+    <View style={styles.chips}>
+      {dev.habilidades 
+        ? dev.habilidades
+            .split(',')
+            .slice(0, 3)
+            .map((h) => (
+              <View key={h.trim()} style={styles.chip}>
+                <Text style={styles.chipText}>{h.trim()}</Text>
+              </View>
+            ))
+        : <View style={styles.chip}>
+            <Text style={styles.chipText}>Não informado</Text>
+          </View>
+      }
+    </View>
     </Pressable>
   );
 }
@@ -67,13 +84,19 @@ export default function BuscarDesenvolvedoresScreen() {
   const [busca, setBusca] = useState('');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    authService.getDesenvolvedores().then((data) => {
+ useEffect(() => {
+  authService.getDesenvolvedores()
+    .then((data) => {
       setDevs(data);
       setFiltrado(data);
-      setLoading(false);
+    })
+    .catch((error) => {
+      console.error("Erro ao buscar desenvolvedores:", error);
+    })
+    .finally(() => {
+      setLoading(false); 
     });
-  }, []);
+}, []);
 
   const handleBusca = useCallback(
     (text: string) => {
@@ -84,13 +107,13 @@ export default function BuscarDesenvolvedoresScreen() {
       }
       const q = text.toLowerCase();
       setFiltrado(
-        devs.filter(
-          (d) =>
-            d.nome.toLowerCase().includes(q) ||
-            d.habilidades.toLowerCase().includes(q) ||
-            d.descricao.toLowerCase().includes(q)
-        )
-      );
+      devs.filter(
+        (d) =>
+          (d.nome || '').toLowerCase().includes(q) ||
+          (d.habilidades || '').toLowerCase().includes(q) ||
+          (d.descricao || '').toLowerCase().includes(q)
+      )
+    );
     },
     [devs]
   );
@@ -195,7 +218,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '700',
     color: Colors.text,
   },
@@ -215,6 +238,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: Colors.text,
     fontSize: 14,
+    paddingVertical: 0,
   },
   label: {
     color: Colors.textSecondary,
