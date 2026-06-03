@@ -60,7 +60,7 @@ export function DrawerMenu({
 }) {
   const { user, logout } = useAuth();
   const router = useRouter();
-  const { avatarUri } = useAvatar();
+  const { avatarUri } = useAvatar(user?.idUsuario);
   const isDev = user?.type === 'developer';
   const firstName = user?.nome?.split(' ')[0] ?? 'Usuário';
 

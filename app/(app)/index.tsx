@@ -166,7 +166,7 @@ export default function HomeScreen() {
   const isDev = user?.type === 'developer';
   const typeLabel = isDev ? 'Desenvolvedor' : 'Empresa';
   const avatarLetter = user?.nome?.charAt(0).toUpperCase() ?? '?';
-  const { avatarUri } = useAvatar();
+  const { avatarUri } = useAvatar(user?.idUsuario);
 
   return (
     <SafeAreaView style={styles.safe}>

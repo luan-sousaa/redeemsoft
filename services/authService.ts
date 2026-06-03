@@ -74,12 +74,15 @@ export type MinhaCandidatura = {
 };
 
 
-const API_URL = 'http://localhost:3000'; 
+const API_URL = 'https://photography-enhancements-reserved-gregory.trycloudflare.com';
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || 'Ocorreu um erro na requisição.');
+    const text = await response.text().catch(() => '');
+    console.log('API error status:', response.status, 'body:', text);
+    let errorData: any = {};
+    try { errorData = JSON.parse(text); } catch {}
+    throw new Error(errorData.mensagem || errorData.message || `Erro ${response.status}`);
   }
   return response.json();
 }
@@ -144,23 +147,23 @@ export const authService = {
   },
 
 
-  async jaCandidatou(projetoId: string): Promise<boolean> {
-    const response = await fetch(`${API_URL}/candidaturas/check/${projetoId}`);
+  async jaCandidatou(projetoId: string, idUsuario: number): Promise<boolean> {
+    const response = await fetch(`${API_URL}/candidaturas/check/${projetoId}?idUsuario=${idUsuario}`);
     const data = await handleResponse<{ jaCandidatou: boolean }>(response);
     return data.jaCandidatou;
   },
 
-  async candidatar(data: Omit<MinhaCandidatura, 'status' | 'dataEnvio' | 'candidaturaId'>): Promise<void> {
+  async candidatar(data: Omit<MinhaCandidatura, 'status' | 'dataEnvio' | 'candidaturaId'> & { idUsuario: number }): Promise<void> {
     const response = await fetch(`${API_URL}/candidaturas`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      body: JSON.stringify({ idUsuario: data.idUsuario, idProjeto: data.projetoId, proposta: data.preco }),
     });
     return handleResponse<void>(response);
   },
 
-  async getMinhaCandidaturas(): Promise<MinhaCandidatura[]> {
-    const response = await fetch(`${API_URL}/candidaturas/minhas`);
+  async getMinhaCandidaturas(idUsuario: number): Promise<MinhaCandidatura[]> {
+    const response = await fetch(`${API_URL}/candidaturas/minhas?idUsuario=${idUsuario}`);
     return handleResponse<MinhaCandidatura[]>(response);
   },
 

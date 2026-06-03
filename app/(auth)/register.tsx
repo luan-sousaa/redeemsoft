@@ -314,7 +314,7 @@ async function handleRegister() {
                 color={userType === 'developer' ? Colors.white : Colors.textSecondary}
               />
               <Text style={[styles.typeText, userType === 'developer' && styles.typeTextSelected]}>
-                Desenvolvedor
+                Dev
               </Text>
             </Pressable>
           </View>
@@ -546,20 +546,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 6,
+    paddingHorizontal: 8,
     borderRadius: 10,
     borderWidth: 1.5,
     borderColor: Colors.border,
     backgroundColor: Colors.surface,
+    overflow: 'hidden',
   },
   typeButtonSelected: {
     backgroundColor: Colors.primary,
     borderColor: Colors.primary,
   },
   typeText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: Colors.textSecondary,
+    flexShrink: 1,
   },
   typeTextSelected: {
     color: Colors.white,

@@ -46,7 +46,7 @@ function ProjetoCell({ index, imageUri }: { index: number; imageUri?: string }) 
 export default function SobreMimScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const { avatarUri, pickAvatar, isPickerLoading } = useAvatar();
+  const { avatarUri, pickAvatar, isPickerLoading } = useAvatar(user?.idUsuario);
 
   const [sobre, setSobre] = useState('');
   const [isLoading, setIsLoading] = useState(false);

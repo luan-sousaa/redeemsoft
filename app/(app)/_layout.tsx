@@ -1,10 +1,8 @@
-import { AuthProvider } from '@/contexts/AuthContext';
 import { Stack } from 'expo-router';
 import React from 'react';
 
 export default function AppLayout() {
   return (
-
     <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="marketplace" />
@@ -19,6 +17,7 @@ export default function AppLayout() {
       <Stack.Screen name="chat-conversa" />
       <Stack.Screen name="checkout" />
       <Stack.Screen name="pagamento-pix" />
+      <Stack.Screen name="notificacoes" />
     </Stack>
   );
 }

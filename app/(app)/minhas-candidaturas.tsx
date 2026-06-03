@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors } from '@/constants/colors';
 import { authService } from '@/services/authService';
+import { useAuth } from '@/contexts/AuthContext';
 import Head from 'expo-router/head';
 import { MinhaCandidatura } from '@/types';
 
@@ -100,13 +101,15 @@ function CandidaturaCard({ item }: { item: MinhaCandidatura }) {
 
 export default function MinhasCandidaturasScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const [candidaturas, setCandidaturas] = useState<MinhaCandidatura[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const carregar = useCallback(async () => {
+    if (!user?.idUsuario) return;
     setIsLoading(true);
     try {
-      const data = await authService.getMinhaCandidaturas();
+      const data = await authService.getMinhaCandidaturas(user.idUsuario);
 
       const mapped: MinhaCandidatura[] = (data as any[]).map((d) => ({
         candidaturaId: String(d.idAplicacao ?? d.candidaturaId ?? ''),

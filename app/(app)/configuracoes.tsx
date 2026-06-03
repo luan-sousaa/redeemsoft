@@ -84,7 +84,7 @@ function Section({
 export default function ConfiguracoesScreen() {
   const router = useRouter();
   const { user, logout } = useAuth();
-  const { avatarUri } = useAvatar();
+  const { avatarUri } = useAvatar(user?.idUsuario);
 
   const editarPerfilItems: ConfigItem[] = [
     {
