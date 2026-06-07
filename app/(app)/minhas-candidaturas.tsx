@@ -105,26 +105,21 @@ export default function MinhasCandidaturasScreen() {
   const [isLoading, setIsLoading] = useState(true);
 
   const carregar = useCallback(async () => {
-    if (!user?.idUsuario) return;
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     try {
-      const data = await authService.getMinhaCandidaturas(user.idUsuario);
-
-      const mapped: MinhaCandidatura[] = (data as any[]).map((d) => ({
-        candidaturaId: String(d.idAplicacao ?? d.candidaturaId ?? ''),
-        titulo: d.projetoTitulo ?? d.titulo ?? '',
-        stack: d.projetoStack ?? d.stack ?? '',
-        prazo: String(d.projetoPrazo ?? d.prazo ?? ''),
-        preco: d.proposta ?? d.preco ?? 0,
-        status: (d.statusAplicacao ?? d.status) as MinhaCandidatura['status'] || 'pendente',
-        dataEnvio: d.dataEnvio ? new Date(d.dataEnvio) : new Date(),
-      }));
-
-      setCandidaturas(mapped);
+      const data = await authService.getMinhaCandidaturas();
+      setCandidaturas(data);
+    } catch (e) {
+      console.error('[MinhasCandidaturas] Erro ao carregar candidaturas:', e);
+      setCandidaturas([]);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => { carregar(); }, [carregar]);
 

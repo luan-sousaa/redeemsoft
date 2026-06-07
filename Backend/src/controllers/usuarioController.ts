@@ -1,3 +1,6 @@
+// Adicionado: esqueceuSenha, verificarCodigo, redefinirSenha para o fluxo de recuperação de senha.
+// OTP de 4 dígitos (alinhado com CODE_LENGTH = 4 no frontend verify-code.tsx).
+// Senhas em plaintext — padrão existente do projeto (sem bcrypt).
 import type { Request, Response } from 'express';
 import { db } from '../db/db';
 import { usuario, cliente, desenvolvedor } from '../db/schema';
@@ -87,6 +90,70 @@ export const deletarUsuario = async (req: Request, res: Response) => {
     return res.status(200).json({ mensagem: 'Usuário deletado com sucesso!' });
   } catch (error) {
     return res.status(500).json({ mensagem: 'Erro ao deletar usuário.', error });
+  }
+};
+
+export const esqueceuSenha = async (req: Request, res: Response) => {
+  const { email } = req.body;
+  try {
+    const [user] = await db.select().from(usuario).where(eq(usuario.email, email));
+
+    if (!user) {
+      return res.status(200).json({
+        mensagem: 'Se o e-mail estiver cadastrado, você receberá um código.',
+      });
+    }
+
+    const code = Math.floor(1000 + Math.random() * 9000).toString();
+    const expiry = Date.now() + 15 * 60 * 1000;
+
+    await db
+      .update(usuario)
+      .set({ resetToken: code, resetTokenExpiry: expiry })
+      .where(eq(usuario.email, email));
+
+    // TODO: replace with real email sending (nodemailer/resend) in production
+    return res.status(200).json({ mensagem: 'Código gerado com sucesso.', code });
+  } catch (error) {
+    console.error('ERRO AO GERAR CÓDIGO:', error);
+    return res.status(500).json({ mensagem: 'Ocorreu um erro. Tente novamente.' });
+  }
+};
+
+export const verificarCodigo = async (req: Request, res: Response) => {
+  const { email, code } = req.body;
+  try {
+    const [user] = await db.select().from(usuario).where(eq(usuario.email, email));
+
+    if (!user) return res.status(404).json({ mensagem: 'Usuário não encontrado.' });
+    if (user.resetToken !== code) return res.status(400).json({ mensagem: 'Código inválido.' });
+    if (!user.resetTokenExpiry || user.resetTokenExpiry < Date.now()) {
+      return res.status(400).json({ mensagem: 'Código expirado. Solicite um novo.' });
+    }
+
+    return res.status(200).json({ mensagem: 'Código válido.', email });
+  } catch (error) {
+    console.error('ERRO AO VERIFICAR CÓDIGO:', error);
+    return res.status(500).json({ mensagem: 'Ocorreu um erro. Tente novamente.' });
+  }
+};
+
+export const redefinirSenha = async (req: Request, res: Response) => {
+  const { email, novaSenha } = req.body;
+  try {
+    const [user] = await db.select().from(usuario).where(eq(usuario.email, email));
+
+    if (!user) return res.status(404).json({ mensagem: 'Usuário não encontrado.' });
+
+    await db
+      .update(usuario)
+      .set({ senha: novaSenha, resetToken: null, resetTokenExpiry: null })
+      .where(eq(usuario.email, email));
+
+    return res.status(200).json({ mensagem: 'Senha alterada com sucesso.' });
+  } catch (error) {
+    console.error('ERRO AO REDEFINIR SENHA:', error);
+    return res.status(500).json({ mensagem: 'Ocorreu um erro. Tente novamente.' });
   }
 };
 

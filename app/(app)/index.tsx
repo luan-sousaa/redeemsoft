@@ -11,8 +11,7 @@ import { Logo } from '@/components/Logo';
 import { DrawerMenu } from '@/components/DrawerMenu';
 import { Colors } from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAvatar } from '@/hooks/use-avatar';
-import Head from 'expo-router/head';
+import { useProfile } from '@/contexts/ProfileContext';
 // ─── Quick-access card ────────────────────────────────────────────────────────
 
 function AcessoCard({
@@ -52,10 +51,6 @@ function HomeDev() {
   return (
     <>
       <Animated.View entering={FadeInUp.delay(0).duration(350)}>
-         <Head>
-                    <title> Home | RedeemSoft</title>
-                    <meta name="description" content="Página inicial do RedeemSoft" />
-                  </Head>
         <View style={styles.sectionHeader}>
           <Ionicons name="flash-outline" size={16} color={Colors.primary} />
           <Text style={styles.sectionTitle}>Acesso rápido</Text>
@@ -104,10 +99,6 @@ function HomeEmpresa() {
     
     <>
       <Animated.View entering={FadeInUp.delay(0).duration(350)}>
-        <Head>
-                    <title> Home | RedeemSoft</title>
-                    <meta name="description" content="Página inicial do RedeemSoft" />
-                  </Head>
         <View style={styles.sectionHeader}>
           <Ionicons name="flash-outline" size={16} color={Colors.primary} />
           <Text style={styles.sectionTitle}>Acesso rápido</Text>
@@ -161,12 +152,13 @@ function HomeEmpresa() {
 
 export default function HomeScreen() {
   const { user, logout } = useAuth();
+  const { profile } = useProfile();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const isDev = user?.type === 'developer';
   const typeLabel = isDev ? 'Desenvolvedor' : 'Empresa';
-  const avatarLetter = user?.nome?.charAt(0).toUpperCase() ?? '?';
-  const { avatarUri } = useAvatar(user?.idUsuario);
+  const avatarLetter = user?.name?.charAt(0).toUpperCase() ?? '?';
+  const avatarUri = profile.fotoUri;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -197,7 +189,7 @@ export default function HomeScreen() {
               <Text style={styles.avatarLetter}>{avatarLetter}</Text>
             )}
           </View>
-          <Text style={styles.userName}>Olá, {user?.nome}</Text>
+          <Text style={styles.userName}>Olá, {user?.name}</Text>
           <View style={[styles.typeBadge, isDev ? styles.typeBadgeDev : styles.typeBadgeEmpresa]}>
             <Ionicons
               name={isDev ? 'code-slash-outline' : 'business-outline'}

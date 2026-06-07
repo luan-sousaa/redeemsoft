@@ -6,6 +6,7 @@ import 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
 
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { ProfileProvider } from '@/contexts/ProfileContext';
 
 function RootLayoutNav() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -44,9 +45,11 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <RootLayoutNav />
-      <StatusBar style="light" />
-      <Toast />
+      <ProfileProvider>
+        <RootLayoutNav />
+        <StatusBar style="light" />
+        <Toast />
+      </ProfileProvider>
     </AuthProvider>
   );
 }

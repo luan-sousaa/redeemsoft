@@ -114,17 +114,19 @@ export const authService = {
     return { token: res.token, user: mapUser(res.user, parseJwtPayload(res.token)) };
   },
 
-  async forgotPassword(_email: string): Promise<void> {
-    await new Promise((r) => setTimeout(r, 800));
+  // Conectado ao backend: POST /usuario/forgot-password — gera OTP de 4 dígitos e retorna no body para testes.
+  async forgotPassword(email: string): Promise<void> {
+    await api.post<{ mensagem: string; code?: string }>('/usuario/forgot-password', { email });
   },
 
-  async verifyCode(_email: string, code: string): Promise<void> {
-    await new Promise((r) => setTimeout(r, 600));
-    if (code !== '1234') throw new Error('Código inválido ou expirado. Tente novamente.');
+  // Conectado ao backend: POST /usuario/verify-code — valida o OTP enviado pelo usuário.
+  async verifyCode(email: string, code: string): Promise<void> {
+    await api.post<{ mensagem: string; email: string }>('/usuario/verify-code', { email, code });
   },
 
-  async resetPassword(_email: string, _code: string, _newPassword: string): Promise<void> {
-    await new Promise((r) => setTimeout(r, 800));
+  // Conectado ao backend: POST /usuario/reset-password — atualiza a senha e limpa o token.
+  async resetPassword(email: string, _code: string, newPassword: string): Promise<void> {
+    await api.post<{ mensagem: string }>('/usuario/reset-password', { email, novaSenha: newPassword });
   },
 
   async getProjetosEmpresa(_empresaId: string): Promise<ProjetoEmpresa[]> {

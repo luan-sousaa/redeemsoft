@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -16,23 +16,17 @@ import Toast from 'react-native-toast-message';
 
 import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/colors';
-import { profileService } from '@/services/profileService';
+import { useProfile } from '@/contexts/ProfileContext';
 
 export default function EditarCertificadosScreen() {
   const router = useRouter();
+  const { profile, updateProfile } = useProfile();
   const inputRef = useRef<TextInput>(null);
 
-  const [certificados, setCertificados] = useState<string[]>([]);
+  const [certificados, setCertificados] = useState<string[]>(() => profile.certificados);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isFetching, setIsFetching] = useState(true);
-
-  useEffect(() => {
-    profileService.get().then((p) => {
-      setCertificados(p.certificados);
-      setIsFetching(false);
-    });
-  }, []);
+  const isFetching = false;
 
   function addCertificado() {
     const trimmed = input.trim();
@@ -53,7 +47,7 @@ export default function EditarCertificadosScreen() {
   async function handleSalvar() {
     setIsLoading(true);
     try {
-      await profileService.update({ certificados });
+      await updateProfile({ certificados });
       Toast.show({ type: 'success', text1: 'Certificados salvos!' });
       router.back();
     } catch {

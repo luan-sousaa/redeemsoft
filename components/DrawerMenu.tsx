@@ -1,3 +1,7 @@
+// DrawerMenu.tsx — Menu lateral do app.
+// Alterado: item "Perfil" renomeado para "Meu Perfil" e agora navega para sobre-mim.
+// Avatar e nome corrigidos para ler de ProfileContext e AuthContext.user.name.
+
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -16,7 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors } from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAvatar } from '@/hooks/use-avatar';
+import { useProfile } from '@/contexts/ProfileContext';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -59,10 +63,11 @@ export function DrawerMenu({
   activeScreen?: string;
 }) {
   const { user, logout } = useAuth();
+  const { profile } = useProfile();
   const router = useRouter();
-  const { avatarUri } = useAvatar(user?.idUsuario);
+  const avatarUri = profile.fotoUri;
   const isDev = user?.type === 'developer';
-  const firstName = user?.nome?.split(' ')[0] ?? 'Usuário';
+  const firstName = user?.name?.split(' ')[0] ?? 'Usuário';
 
   const devItems: DrawerNavItem[] = [
     {
@@ -73,9 +78,9 @@ export function DrawerMenu({
     },
     {
       icon: 'person-outline',
-      label: 'Perfil',
-      onPress: () => { onClose(); },
-      active: activeScreen === 'perfil',
+      label: 'Meu Perfil',
+      onPress: () => { onClose(); router.push('/(app)/sobre-mim' as Href); },
+      active: activeScreen === 'sobre-mim',
     },
     {
       icon: 'chatbubble-outline',
@@ -122,9 +127,9 @@ export function DrawerMenu({
     },
     {
       icon: 'person-outline',
-      label: 'Perfil',
-      onPress: () => { onClose(); },
-      active: activeScreen === 'perfil',
+      label: 'Meu Perfil',
+      onPress: () => { onClose(); router.push('/(app)/sobre-mim' as Href); },
+      active: activeScreen === 'sobre-mim',
     },
     {
       icon: 'chatbubble-outline',
@@ -193,7 +198,7 @@ export function DrawerMenu({
                 <Image source={{ uri: avatarUri }} style={styles.drawerAvatarImage} contentFit="cover" />
               ) : (
                 <Text style={styles.drawerAvatarLetter}>
-                  {user?.nome?.charAt(0).toUpperCase() ?? '?'}
+                  {user?.name?.charAt(0).toUpperCase() ?? '?'}
                 </Text>
               )}
             </View>

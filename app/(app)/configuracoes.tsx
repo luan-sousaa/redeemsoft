@@ -1,3 +1,8 @@
+// configuracoes.tsx — Hub de configurações do desenvolvedor.
+// Alterado: links "Sobre mim" e "Projetos" agora apontam para editar-perfil (tela de edição).
+// Adicionado: botão "Ver prévia do perfil" que navega para sobre-mim (prévia pública).
+// O botão de editar avatar no card de perfil também vai para editar-perfil.
+
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
@@ -85,9 +90,9 @@ export default function ConfiguracoesScreen() {
 
   const editarPerfilItems: ConfigItem[] = [
     {
-      label: 'Sobre mim',
+      label: 'Sobre mim e Projetos',
       icon: 'person-outline',
-      onPress: () => router.push('/(app)/sobre-mim' as Href),
+      onPress: () => router.push('/(app)/editar-perfil' as Href),
     },
     {
       label: 'Habilidades',
@@ -98,11 +103,6 @@ export default function ConfiguracoesScreen() {
       label: 'Certificados',
       icon: 'ribbon-outline',
       onPress: () => router.push('/(app)/editar-certificados' as Href),
-    },
-    {
-      label: 'Projetos',
-      icon: 'briefcase-outline',
-      onPress: () => router.push('/(app)/sobre-mim' as Href),
     },
   ];
 
@@ -135,7 +135,7 @@ export default function ConfiguracoesScreen() {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        {/* Avatar resumido */}
+        {/* Card de perfil com link para prévia */}
         <View style={styles.profileCard}>
           <View style={styles.avatar}>
             <Text style={styles.avatarLetter}>
@@ -148,11 +148,21 @@ export default function ConfiguracoesScreen() {
           </View>
           <Pressable
             style={styles.editAvatarBtn}
-            onPress={() => router.push('/(app)/sobre-mim' as Href)}
+            onPress={() => router.push('/(app)/editar-perfil' as Href)}
           >
             <Ionicons name="create-outline" size={20} color={Colors.primary} />
           </Pressable>
         </View>
+
+        {/* Botão "Ver prévia do perfil" */}
+        <Pressable
+          style={({ pressed }) => [styles.previewBtn, pressed && styles.previewBtnPressed]}
+          onPress={() => router.push('/(app)/sobre-mim' as Href)}
+        >
+          <Ionicons name="eye-outline" size={18} color={Colors.primary} />
+          <Text style={styles.previewBtnText}>Ver prévia do perfil</Text>
+          <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
+        </Pressable>
 
         {/* Editar Perfil */}
         <Section
@@ -250,6 +260,28 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceHighlight,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+
+  // Botão prévia
+  previewBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  previewBtnPressed: {
+    backgroundColor: Colors.surfaceHighlight,
+  },
+  previewBtnText: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.primary,
   },
 
   // Seção

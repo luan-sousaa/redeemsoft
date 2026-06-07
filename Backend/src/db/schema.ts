@@ -1,5 +1,6 @@
 import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
 
+// Adicionado: resetToken e resetTokenExpiry para o fluxo de recuperação de senha.
 export const usuario = sqliteTable("usuario",{
 
   idUsuario: integer("id").primaryKey({autoIncrement:true}).notNull(),
@@ -10,6 +11,8 @@ export const usuario = sqliteTable("usuario",{
   cidade: text("cidade"),
   estado: text("estado"),
   cpfCnpj: text("cpfCnpj"),
+  resetToken: text("resetToken"),
+  resetTokenExpiry: integer("resetTokenExpiry"),
 });
 
 export const desenvolvedor = sqliteTable("desenvolvedor",{

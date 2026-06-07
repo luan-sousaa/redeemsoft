@@ -1,98 +1,74 @@
+// sobre-mim.tsx — Prévia pública do perfil do desenvolvedor (somente leitura).
+// Exibe foto, nome, bio, habilidades (chips), certificações (lista) e projetos (grid).
+// Dados vêm de ProfileContext (AsyncStorage + API) e AuthContext.
+// Acessível via DrawerMenu ("Meu Perfil") e configuracoes ("Ver prévia do perfil").
+
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
-  ActionSheetIOS,
-  Alert,
-  Dimensions,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Toast from 'react-native-toast-message';
 
-import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
-import { profileService } from '@/services/profileService';
+import { useProfile } from '@/contexts/ProfileContext';
 
 const { width } = Dimensions.get('window');
 const GRID_GAP = 12;
-const GRID_PADDING = 24;
-const CELL_SIZE = (width - GRID_PADDING * 2 - GRID_GAP) / 2;
+const GRID_PADDING = 20;
+const CARD_SIZE = (width - GRID_PADDING * 2 - GRID_GAP) / 2;
 
-async function pickFromGallery(): Promise<string | null> {
-  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (status !== 'granted') {
-    Alert.alert('Permissão necessária', 'Permita o acesso à galeria nas configurações do dispositivo.');
-    return null;
-  }
-  const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ['images'],
-    allowsEditing: true,
-    aspect: [1, 1],
-    quality: 0.8,
-  });
-  if (result.canceled) return null;
-  return result.assets[0].uri;
-}
+// ─── Componentes auxiliares ───────────────────────────────────────────────────
 
-async function pickFromCamera(): Promise<string | null> {
-  const { status } = await ImagePicker.requestCameraPermissionsAsync();
-  if (status !== 'granted') {
-    Alert.alert('Permissão necessária', 'Permita o acesso à câmera nas configurações do dispositivo.');
-    return null;
-  }
-  const result = await ImagePicker.launchCameraAsync({
-    allowsEditing: true,
-    aspect: [1, 1],
-    quality: 0.8,
-  });
-  if (result.canceled) return null;
-  return result.assets[0].uri;
-}
-
-function showImageSourcePicker(onPick: (uri: string | null) => void) {
-  if (Platform.OS === 'ios') {
-    ActionSheetIOS.showActionSheetWithOptions(
-      { options: ['Cancelar', 'Câmera', 'Galeria'], cancelButtonIndex: 0 },
-      async (idx) => {
-        if (idx === 1) onPick(await pickFromCamera());
-        else if (idx === 2) onPick(await pickFromGallery());
-      }
-    );
-  } else {
-    Alert.alert('Foto de perfil', 'Escolha a origem', [
-      { text: 'Cancelar', style: 'cancel', onPress: () => onPick(null) },
-      { text: 'Câmera', onPress: async () => onPick(await pickFromCamera()) },
-      { text: 'Galeria', onPress: async () => onPick(await pickFromGallery()) },
-    ]);
-  }
-}
-
-// ─── Célula de projeto ────────────────────────────────────────────────────────
-
-function ProjetoCell({ uri, onPress }: { uri: string | null; onPress: () => void }) {
+function SectionHeader({ title }: { title: string }) {
   return (
-    <Pressable style={styles.projetoCell} onPress={onPress}>
-      {uri ? (
-        <Image source={{ uri }} style={styles.projetoCellImage} />
-      ) : (
-        <View style={styles.projetoCellEmpty}>
-          <Ionicons name="add-outline" size={28} color={Colors.textSecondary} />
-          <Text style={styles.projetoCellLabel}>Adicionar</Text>
-        </View>
-      )}
-    </Pressable>
+    <View style={styles.sectionHeaderRow}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+    </View>
   );
+}
+
+function SkillChip({ label }: { label: string }) {
+  return (
+    <View style={styles.chip}>
+      <Text style={styles.chipText}>{label}</Text>
+    </View>
+  );
+}
+
+function CertRow({ label }: { label: string }) {
+  return (
+    <View style={styles.certRow}>
+      <View style={styles.certIconWrap}>
+        <Ionicons name="ribbon-outline" size={18} color={Colors.primary} />
+      </View>
+      <Text style={styles.certText} numberOfLines={2}>{label}</Text>
+    </View>
+  );
+}
+
+function ProjetoCard({ uri, index }: { uri: string; index: number }) {
+  return (
+    <View style={styles.projetoCard}>
+      <Image source={{ uri }} style={styles.projetoImage} contentFit="cover" />
+      <View style={styles.projetoLabelRow}>
+        <Ionicons name="briefcase-outline" size={11} color={Colors.primary} />
+        <Text style={styles.projetoLabelText}>Projeto {index + 1}</Text>
+      </View>
+    </View>
+  );
+}
+
+function EmptyHint({ text }: { text: string }) {
+  return <Text style={styles.emptyHint}>{text}</Text>;
 }
 
 // ─── Tela ─────────────────────────────────────────────────────────────────────
@@ -100,186 +76,284 @@ function ProjetoCell({ uri, onPress }: { uri: string | null; onPress: () => void
 export default function SobreMimScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const { profile } = useProfile();
 
-  const [sobre, setSobre] = useState('');
-  const [fotoUri, setFotoUri] = useState<string | null>(null);
-  const [projetoFotos, setProjetoFotos] = useState<(string | null)[]>([null, null, null, null]);
-  const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    profileService.get().then((p) => {
-      setSobre(p.sobreMim);
-      setFotoUri(p.fotoUri);
-      setProjetoFotos(p.projetoFotos.length === 4 ? p.projetoFotos : [null, null, null, null]);
-    });
-  }, []);
-
-  function handleFotoPress() {
-    showImageSourcePicker((uri) => {
-      if (uri) setFotoUri(uri);
-    });
-  }
-
-  async function handleProjetoCellPress(index: number) {
-    const uri = await pickFromGallery();
-    if (uri) {
-      setProjetoFotos((prev) => {
-        const next = [...prev];
-        next[index] = uri;
-        return next;
-      });
-    }
-  }
-
-  async function handleSalvar() {
-    setIsLoading(true);
-    try {
-      await profileService.update({ sobreMim: sobre, fotoUri, projetoFotos });
-      Toast.show({ type: 'success', text1: 'Perfil atualizado!', text2: 'Suas informações foram salvas.' });
-      router.back();
-    } catch {
-      Toast.show({ type: 'error', text1: 'Erro ao salvar', text2: 'Tente novamente.' });
-    } finally {
-      setIsLoading(false);
-    }
-  }
+  const { sobreMim, habilidades, certificados, fotoUri, projetoFotos } = profile;
+  const projetosComFoto = projetoFotos.filter((uri): uri is string => !!uri);
 
   return (
     <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <View style={styles.header}>
-          <Pressable style={styles.backBtn} onPress={() => router.back()}>
-            <Ionicons name="arrow-back-circle-outline" size={30} color={Colors.text} />
-          </Pressable>
-          <Text style={styles.headerTitle} numberOfLines={1}>
-            {user?.name ?? 'Nome Prestador'}
-          </Text>
+      {/* Header */}
+      <View style={styles.header}>
+        <Pressable style={styles.backBtn} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color={Colors.text} />
+        </Pressable>
+        <Text style={styles.headerTitle}>Meu Perfil</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+
+        {/* Hero: foto + nome + badge */}
+        <View style={styles.heroSection}>
+          <View style={styles.avatarWrap}>
+            {fotoUri ? (
+              <Image source={{ uri: fotoUri }} style={styles.avatarImage} contentFit="cover" />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Ionicons name="person" size={48} color={Colors.textSecondary} />
+              </View>
+            )}
+          </View>
+          <Text style={styles.nome}>{user?.name ?? 'Desenvolvedor'}</Text>
+          <View style={styles.typeBadge}>
+            <Ionicons name="code-slash-outline" size={12} color={Colors.primary} />
+            <Text style={styles.typeBadgeText}>Desenvolvedor</Text>
+          </View>
         </View>
 
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Foto de perfil */}
-          <View style={styles.photoSection}>
-            <Pressable style={styles.photoContainer} onPress={handleFotoPress}>
-              {fotoUri ? (
-                <Image source={{ uri: fotoUri }} style={styles.photoImage} />
-              ) : (
-                <View style={styles.photoPlaceholder}>
-                  <Ionicons name="camera-outline" size={32} color={Colors.textSecondary} />
-                  <Text style={styles.photoLabel}>Foto</Text>
-                </View>
-              )}
-              <View style={styles.cameraOverlay}>
-                <Ionicons name="camera" size={14} color={Colors.text} />
-              </View>
-            </Pressable>
+        {/* Sobre Mim */}
+        <View style={styles.section}>
+          <SectionHeader title="Sobre Mim" />
+          <View style={styles.textCard}>
+            {sobreMim ? (
+              <Text style={styles.bioText}>{sobreMim}</Text>
+            ) : (
+              <EmptyHint text="Nenhuma bio cadastrada ainda." />
+            )}
           </View>
+        </View>
 
-          {/* Sobre */}
-          <View style={styles.sobreContainer}>
-            <TextInput
-              style={styles.sobreInput}
-              value={sobre}
-              onChangeText={setSobre}
-              placeholder="Sobre:"
-              placeholderTextColor={Colors.textSecondary}
-              multiline
-              numberOfLines={5}
-              textAlignVertical="top"
-              selectionColor={Colors.primary}
-            />
-          </View>
+        {/* Habilidades */}
+        <View style={styles.section}>
+          <SectionHeader title="Habilidades" />
+          {habilidades.length > 0 ? (
+            <View style={styles.chipsWrap}>
+              {habilidades.map((h) => (
+                <SkillChip key={h} label={h} />
+              ))}
+            </View>
+          ) : (
+            <EmptyHint text="Nenhuma habilidade cadastrada ainda." />
+          )}
+        </View>
 
-          {/* Projetos */}
-          <Text style={styles.projetosLabel}>Projetos:</Text>
-          <View style={styles.projetosGrid}>
-            {projetoFotos.map((uri, i) => (
-              <ProjetoCell key={i} uri={uri} onPress={() => handleProjetoCellPress(i)} />
-            ))}
-          </View>
+        {/* Certificações */}
+        <View style={styles.section}>
+          <SectionHeader title="Certificações" />
+          {certificados.length > 0 ? (
+            <View style={styles.certList}>
+              {certificados.map((c) => (
+                <CertRow key={c} label={c} />
+              ))}
+            </View>
+          ) : (
+            <EmptyHint text="Nenhum certificado cadastrado ainda." />
+          )}
+        </View>
 
-          <View style={styles.saveContainer}>
-            <Button title="Salvar alterações" onPress={handleSalvar} isLoading={isLoading} />
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        {/* Projetos */}
+        <View style={styles.section}>
+          <SectionHeader title="Projetos" />
+          {projetosComFoto.length > 0 ? (
+            <View style={styles.projetosGrid}>
+              {projetosComFoto.map((uri, i) => (
+                <ProjetoCard key={i} uri={uri} index={i} />
+              ))}
+            </View>
+          ) : (
+            <EmptyHint text="Nenhum projeto adicionado ainda." />
+          )}
+        </View>
+
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
+// ─── Estilos ──────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
-  flex: { flex: 1 },
+
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    gap: 10,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  backBtn: { alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { flex: 1, fontSize: 20, fontWeight: '800', color: Colors.text },
-  scroll: { padding: GRID_PADDING, paddingBottom: 48 },
-
-  photoSection: { alignItems: 'center', marginBottom: 24 },
-  photoContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 16,
-    overflow: 'hidden',
-    backgroundColor: Colors.surface,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    borderStyle: 'dashed',
+  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: {
+    flex: 1,
+    fontSize: 20,
+    fontWeight: '800',
+    color: Colors.text,
+    textAlign: 'center',
   },
-  photoImage: { width: '100%', height: '100%' },
-  photoPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6 },
-  photoLabel: { fontSize: 14, color: Colors.textSecondary, fontWeight: '500' },
-  cameraOverlay: {
-    position: 'absolute',
-    bottom: 6,
-    right: 6,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: Colors.primary,
+
+  scroll: { paddingBottom: 48 },
+
+  // Hero
+  heroSection: {
+    alignItems: 'center',
+    paddingVertical: 28,
+    paddingHorizontal: GRID_PADDING,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    gap: 10,
+  },
+  avatarWrap: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    overflow: 'hidden',
+    backgroundColor: Colors.surfaceHighlight,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    marginBottom: 4,
+  },
+  avatarImage: { width: 96, height: 96 },
+  avatarPlaceholder: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  nome: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: Colors.text,
+    textAlign: 'center',
+  },
+  typeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  typeBadgeText: { fontSize: 12, color: Colors.primary, fontWeight: '600' },
 
-  sobreContainer: {
+  // Seção genérica
+  section: {
+    paddingHorizontal: GRID_PADDING,
+    paddingTop: 24,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  sectionHeaderRow: { marginBottom: 14 },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+
+  // Bio
+  textCard: {
     backgroundColor: Colors.surface,
     borderRadius: 14,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: Colors.border,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginBottom: 24,
-    minHeight: 120,
+    padding: 16,
   },
-  sobreInput: { fontSize: 15, color: Colors.text, lineHeight: 22, minHeight: 96 },
+  bioText: {
+    fontSize: 15,
+    color: Colors.text,
+    lineHeight: 24,
+  },
 
-  projetosLabel: { fontSize: 15, fontWeight: '600', color: Colors.text, marginBottom: 12 },
-  projetosGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP, marginBottom: 32 },
-  projetoCell: {
-    width: CELL_SIZE,
-    height: CELL_SIZE,
-    borderRadius: 12,
-    backgroundColor: Colors.surface,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    overflow: 'hidden',
+  // Chips de habilidade
+  chipsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
-  projetoCellImage: { width: '100%', height: '100%' },
-  projetoCellEmpty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6 },
-  projetoCellLabel: { fontSize: 12, color: Colors.textSecondary, fontWeight: '500' },
-  saveContainer: { marginTop: 8 },
+  chip: {
+    backgroundColor: Colors.surfaceHighlight,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  chipText: {
+    fontSize: 13,
+    color: Colors.primary,
+    fontWeight: '600',
+  },
+
+  // Lista de certificações
+  certList: { gap: 10 },
+  certRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 12,
+  },
+  certIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(79,110,247,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  certText: {
+    flex: 1,
+    fontSize: 14,
+    color: Colors.text,
+    fontWeight: '500',
+    lineHeight: 20,
+  },
+
+  // Grid de projetos
+  projetosGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: GRID_GAP,
+  },
+  projetoCard: {
+    width: CARD_SIZE,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  projetoImage: {
+    width: CARD_SIZE,
+    height: CARD_SIZE,
+  },
+  projetoLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  projetoLabelText: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    fontWeight: '600',
+  },
+
+  // Placeholder de seção vazia
+  emptyHint: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    fontStyle: 'italic',
+    paddingVertical: 4,
+  },
 });
