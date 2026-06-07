@@ -46,6 +46,7 @@ function CandidatosModal({
   onClose: () => void;
   onUpdate: () => void;
 }) {
+  const router = useRouter();
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   const devMap = Object.fromEntries(desenvolvedores.map((d) => [d.id, d]));
@@ -55,12 +56,27 @@ function CandidatosModal({
     const dev = devMap[cand.desenvolvedorId];
     try {
       await authService.atualizarStatusCandidatura(projeto.id, cand.id, status);
-      Toast.show({
-        type: 'success',
-        text1: status === 'aceito' ? 'Candidato aceito!' : 'Candidato recusado',
-        text2: `${dev?.nome ?? 'Desenvolvedor'} foi ${status === 'aceito' ? 'aceito' : 'recusado'} com sucesso.`,
-      });
-      onUpdate();
+      if (status === 'aceito') {
+        // Navega para checkout para iniciar o pagamento
+        router.push({
+          pathname: '/(app)/checkout',
+          params: {
+            amount: String(Math.round((cand.proposta || projeto.orcamento) * 100)),
+            description: projeto.titulo,
+            projetoNome: projeto.titulo,
+            devNome: dev?.nome ?? cand.nomeDesenvolvedor ?? 'Desenvolvedor',
+            projetoId: projeto.id,
+            candidaturaId: cand.id,
+          },
+        });
+      } else {
+        Toast.show({
+          type: 'success',
+          text1: 'Candidato recusado',
+          text2: `${dev?.nome ?? 'Desenvolvedor'} foi recusado com sucesso.`,
+        });
+        onUpdate();
+      }
     } catch {
       Toast.show({ type: 'error', text1: 'Erro', text2: 'Tente novamente.' });
     } finally {

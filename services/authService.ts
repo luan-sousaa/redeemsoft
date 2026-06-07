@@ -22,6 +22,7 @@ export type RegisterData = {
 export type Candidatura = {
   id: string;
   desenvolvedorId: string;
+  nomeDesenvolvedor: string;
   experiencia: string;
   proposta: number;
   prazo: string;
@@ -146,6 +147,7 @@ export const authService = {
       candidaturas: (p.candidaturas ?? []).map((c: any) => ({
         id: String(c.idAplicacao),
         desenvolvedorId: String(c.idDev),
+        nomeDesenvolvedor: c.desenvolvedor?.nome ?? '',
         experiencia: c.desenvolvedor?.experiencia ?? '',
         proposta: c.proposta ?? 0,
         prazo: `${p.prazo} dias`,

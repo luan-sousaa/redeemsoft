@@ -11,12 +11,20 @@ import { Button } from '@/components/ui/Button';
 
 export default function CheckoutScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ amount?: string; description?: string; projetoId?: string; candidaturaId?: string }>();
+  const params = useLocalSearchParams<{
+    amount?: string;
+    description?: string;
+    projetoNome?: string;
+    devNome?: string;
+    projetoId?: string;
+    candidaturaId?: string;
+  }>();
   const [isLoading, setIsLoading] = useState(false);
 
-  // amount em centavos — padrão R$ 100,00 para teste
   const amountCents = params.amount ? parseInt(params.amount, 10) : 10000;
   const description = params.description ?? 'Pagamento RedeemSoft';
+  const projetoNome = params.projetoNome;
+  const devNome = params.devNome;
 
   const amountFormatted = new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -36,6 +44,8 @@ export default function CheckoutScreen() {
           expiresAt: payment.expiresAt,
           ...(params.projetoId && { projetoId: params.projetoId }),
           ...(params.candidaturaId && { candidaturaId: params.candidaturaId }),
+          ...(projetoNome && { projetoNome }),
+          ...(devNome && { devNome }),
         },
       });
     } catch (err) {
@@ -67,7 +77,22 @@ export default function CheckoutScreen() {
             </View>
             <Text style={styles.label}>Total a pagar</Text>
             <Text style={styles.amount}>{amountFormatted}</Text>
-            <Text style={styles.desc} numberOfLines={2}>{description}</Text>
+            {projetoNome ? (
+              <View style={styles.summaryRows}>
+                <View style={styles.summaryRow}>
+                  <Ionicons name="briefcase-outline" size={14} color={Colors.textSecondary} />
+                  <Text style={styles.summaryText} numberOfLines={1}>{projetoNome}</Text>
+                </View>
+                {devNome ? (
+                  <View style={styles.summaryRow}>
+                    <Ionicons name="person-outline" size={14} color={Colors.textSecondary} />
+                    <Text style={styles.summaryText} numberOfLines={1}>{devNome}</Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : (
+              <Text style={styles.desc} numberOfLines={2}>{description}</Text>
+            )}
           </View>
 
           <View style={styles.pixInfo}>
@@ -165,6 +190,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textSecondary,
     textAlign: 'center',
+  },
+  summaryRows: {
+    gap: 6,
+    marginTop: 4,
+    alignSelf: 'stretch',
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  summaryText: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    flex: 1,
   },
   pixInfo: {
     flexDirection: 'row',
