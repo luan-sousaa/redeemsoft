@@ -17,13 +17,13 @@ export function useAvatar(idUsuario?: number) {
   }, [idUsuario]);
 
   async function pickAvatar() {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') return;
-
-    setIsPickerLoading(true);
     try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') return;
+
+      setIsPickerLoading(true);
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -34,6 +34,8 @@ export function useAvatar(idUsuario?: number) {
         setAvatarUri(uri);
         await AsyncStorage.setItem(avatarKey(idUsuario), uri);
       }
+    } catch (e) {
+      console.error('Erro ao abrir galeria:', e);
     } finally {
       setIsPickerLoading(false);
     }

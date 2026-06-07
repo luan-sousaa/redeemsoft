@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Head from 'expo-router/head';
 import { Colors } from '@/constants/colors';
 
 // ─── Tipos ─────────────────────────────────────────────────────────────────────
@@ -200,10 +199,6 @@ export default function ChatConversaScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
 
-       <Head>
-                    <title> Chat | RedeemSoft</title>
-                    <meta name="description" content="Veja suas candidaturas no RedeemSoft" />
-                  </Head>
       <ChatHeader onBack={() => router.back()} />
 
       <KeyboardAvoidingView

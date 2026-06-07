@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   Pressable,
   StyleSheet,
@@ -15,7 +16,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Logo } from '@/components/Logo';
 import { DrawerMenu } from '@/components/DrawerMenu';
 import { Colors } from '@/constants/colors';
-import {ProjetoEmpresa} from '../../services/authService'
+import { ProjetoEmpresa } from '../../services/authService';
+import { projetoService } from '@/services/projetoService';
 
 // Modalidades disponíveis (chaves usadas em ProjetoEmpresa.modalidades)
 const MODALIDADES: { key: string; label: string }[] = [
@@ -82,6 +84,29 @@ export default function MarketplaceScreen() {
   const [busca, setBusca] = useState('');
   const [filtroModalidade, setFiltroModalidade] = useState<ProjetoEmpresa['modalidades']>([]);
   const [filtroData, setFiltroData] = useState<'recente' | 'antigo' | null>(null);
+  const [projetos, setProjetos] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const carregar = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await projetoService.obterProjetos();
+      const mapeados = data.map((p: any) => ({
+        ...p,
+        id: String(p.idProjeto),
+        modalidades: p.modalidades ?? (p.modalidade ? [p.modalidade] : []),
+        prazo: String(p.prazo ?? ''),
+        candidaturas: p.candidaturas ?? [],
+      }));
+      setProjetos(mapeados);
+    } catch (e) {
+      console.error('Erro ao carregar projetos:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { carregar(); }, [carregar]);
 
   function toggleModalidade(m: ProjetoEmpresa['modalidades'][number]) {
     setFiltroModalidade((prev) =>
@@ -98,7 +123,7 @@ export default function MarketplaceScreen() {
   }
 
   const projetosFiltrados = useMemo(() => {
-    let lista = [] as ProjetoEmpresa[];
+    let lista = projetos as any[];
 
     if (busca.trim()) {
       const termo = busca.toLowerCase();
@@ -117,13 +142,13 @@ export default function MarketplaceScreen() {
     }
 
     if (filtroData === 'recente') {
-      lista.sort((a, b) => b.dataCriacao.getTime() - a.dataCriacao.getTime());
+      lista = [...lista].sort((a, b) => new Date(b.dataCriacao).getTime() - new Date(a.dataCriacao).getTime());
     } else if (filtroData === 'antigo') {
-      lista.sort((a, b) => a.dataCriacao.getTime() - b.dataCriacao.getTime());
+      lista = [...lista].sort((a, b) => new Date(a.dataCriacao).getTime() - new Date(b.dataCriacao).getTime());
     }
 
     return lista;
-  }, [busca, filtroModalidade, filtroData]);
+  }, [projetos, busca, filtroModalidade, filtroData]);
 
   const dataLabel =
     filtroData === 'recente' ? '↓ Recente' : filtroData === 'antigo' ? '↑ Antigo' : 'Data';
@@ -201,9 +226,14 @@ export default function MarketplaceScreen() {
       </View>
 
       {/* ── Lista de projetos ── */}
+      {isLoading ? (
+        <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 40 }} />
+      ) : null}
       <FlatList
         data={projetosFiltrados}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => String(item.idProjeto ?? item.id)}
+        onRefresh={carregar}
+        refreshing={isLoading}
         contentContainerStyle={styles.lista}
         showsVerticalScrollIndicator={false}
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}

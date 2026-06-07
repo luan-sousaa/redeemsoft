@@ -23,7 +23,6 @@ import { Input } from '@/components/ui/Input';
 import { Colors } from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { authService } from '@/services/authService';
-import Head from 'expo-router/head';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -147,10 +146,6 @@ async function handleLogin() {
 
   return (
     <SafeAreaView style={styles.safe}>
-       <Head>
-              <title> Entre | RedeemSoft</title>
-              <meta name="description" content="Entre na sua conta no RedeemSoft" />
-            </Head>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}

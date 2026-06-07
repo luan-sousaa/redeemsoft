@@ -20,7 +20,6 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Colors } from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
-import Head from 'expo-router/head';
 
 type UserType = 'client' | 'developer';
 
@@ -178,10 +177,6 @@ async function handleRegister() {
 
   return (
     <SafeAreaView style={styles.safe}>
-       <Head>
-              <title> Criar Conta | RedeemSoft</title>
-              <meta name="description" content="Crie sua conta no RedeemSoft" />
-            </Head>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
