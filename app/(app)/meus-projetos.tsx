@@ -131,7 +131,7 @@ function CandidatosModal({
                         <Text style={modal.avatarLetter}>{dev?.nome.charAt(0) ?? '?'}</Text>
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={modal.candName}>{dev?.nome ?? cand.nomeDesenvolvedor || 'Desconhecido'}</Text>
+                        <Text style={modal.candName}>{dev?.nome ?? (cand.nomeDesenvolvedor || 'Desconhecido')}</Text>
                         <Text style={modal.candEmail}>{dev?.descricao ?? ''}</Text>
                       </View>
                       <View style={[modal.statusBadge, { backgroundColor: cfg.bg }]}>
