@@ -41,11 +41,13 @@ function CandidatosModal({
   desenvolvedores,
   onClose,
   onUpdate,
+  onVerDev,
 }: {
   projeto: ProjetoEmpresa;
   desenvolvedores: Desenvolvedor[];
   onClose: () => void;
   onUpdate: () => void;
+  onVerDev: (devId: string) => void;
 }) {
   const router = useRouter();
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -115,18 +117,11 @@ function CandidatosModal({
               const dev = devMap[cand.desenvolvedorId];
               return (
                 <View key={cand.id} style={modal.card}>
-                  {/* TouchableOpacity é mais confiável que Pressable dentro de ScrollView+Modal no iOS */}
+                  {/* Fecha o Modal antes de navegar — modal fica sobre a nova tela se navegar de dentro */}
                   <TouchableOpacity
                     activeOpacity={0.7}
                     style={modal.cardTappable}
-                    onPress={() => router.push({
-                      pathname: '/(app)/desenvolvedor-detalhe',
-                      params: {
-                        id: String(cand.desenvolvedorId),
-                        candidaturaId: String(cand.id),
-                        projetoId: String(projeto.id),
-                      },
-                    })}
+                    onPress={() => onVerDev(String(cand.desenvolvedorId))}
                   >
                     <View style={modal.cardHeader}>
                       <View style={modal.avatar}>
@@ -259,6 +254,8 @@ export default function MeusProjetosScreen() {
   const [desenvolvedores, setDesenvolvedores] = useState<Desenvolvedor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [projetoSelecionado, setProjetoSelecionado] = useState<ProjetoEmpresa | null>(null);
+  // Guard: impede múltiplos router.push caso o usuário toque rápido
+  const navegandoRef = React.useRef(false);
 
   const carregar = useCallback(async () => {
     if (!user) return;
@@ -345,6 +342,18 @@ export default function MeusProjetosScreen() {
           desenvolvedores={desenvolvedores}
           onClose={() => setProjetoSelecionado(null)}
           onUpdate={() => { carregar(); setProjetoSelecionado(null); }}
+          onVerDev={(devId) => {
+            if (navegandoRef.current) return; // evita push duplo
+            navegandoRef.current = true;
+            setProjetoSelecionado(null);
+            setTimeout(() => {
+              router.push({
+                pathname: '/(app)/desenvolvedor-detalhe',
+                params: { id: devId },
+              });
+              navegandoRef.current = false;
+            }, 350);
+          }}
         />
       )}
     </SafeAreaView>

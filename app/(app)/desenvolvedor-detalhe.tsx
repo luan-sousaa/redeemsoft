@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -67,50 +67,53 @@ function EmptyHint({ text }: { text: string }) {
 
 export default function DesenvolvedorDetalheScreen() {
   const router = useRouter();
-  // Expo Router pode retornar string | string[] — normaliza para string primitiva
-  // para evitar referência nova de array a cada render (causaria loop infinito no effect)
   const { id: rawId } = useLocalSearchParams();
-  const devId = Array.isArray(rawId) ? rawId[0] : rawId;
+  // Captura o ID uma única vez no mount via ref — evita loop causado por
+  // re-renders do Modal/pageSheet que recria o objeto de params a cada render
+  const devIdRef = useRef(Array.isArray(rawId) ? rawId[0] : rawId);
 
   type DevData = {
     nome: string;
     precoPorHora: number | null;
     sobreMim: string | null;
+    experiencia: string | null;
     habilidades: string[];
     certificacoes: string[];
+    projetos: { titulo: string; stack: string }[];
   };
 
   const [dev, setDev] = useState<DevData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [erro, setErro] = useState(false);
 
-  useEffect(() => {
+  async function tentarNovamente() {
+    const devId = devIdRef.current;
     if (!devId) return;
-    let cancelled = false; // evita setState após desmontagem
-
-    async function carregar() {
-      try {
-        setIsLoading(true);
-        const data = await authService.getDevById(devId);
-        if (!cancelled) {
-          setDev({
-            nome: data.nome,
-            precoPorHora: data.precoPorHora,
-            sobreMim: data.sobreMim,
-            habilidades: parseList(data.habilidades),
-            certificacoes: parseList(data.certificacoes),
-          });
-        }
-      } catch {
-        if (!cancelled) setErro(true);
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
+    setErro(false);
+    setIsLoading(true);
+    try {
+      const data = await authService.getDevById(devId);
+      setDev({
+        nome: data.nome,
+        precoPorHora: data.precoPorHora,
+        sobreMim: data.sobreMim,
+        experiencia: data.experiencia,
+        habilidades: parseList(data.habilidades),
+        certificacoes: parseList(data.certificacoes),
+        projetos: data.projetos ?? [],
+      });
+    } catch {
+      setErro(true);
+    } finally {
+      setIsLoading(false);
     }
+  }
 
-    carregar();
-    return () => { cancelled = true; };
-  }, [devId]); // só re-executa se o ID mudar
+  // Deps [] → roda apenas no mount. devIdRef.current nunca muda.
+  useEffect(() => {
+    tentarNovamente();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -131,7 +134,7 @@ export default function DesenvolvedorDetalheScreen() {
         <View style={styles.center}>
           <Ionicons name="alert-circle-outline" size={48} color={Colors.error} />
           <Text style={styles.erroText}>Erro ao carregar perfil. Tente novamente.</Text>
-          <Pressable style={styles.retryBtn} onPress={() => { setErro(false); setIsLoading(true); }}>
+          <Pressable style={styles.retryBtn} onPress={tentarNovamente}>
             <Text style={styles.retryText}>Tentar novamente</Text>
           </Pressable>
         </View>
@@ -171,6 +174,16 @@ export default function DesenvolvedorDetalheScreen() {
             </View>
           </View>
 
+          {/* Experiência */}
+          {dev.experiencia && dev.experiencia !== dev.sobreMim ? (
+            <View style={styles.section}>
+              <SectionHeader title="Experiência" />
+              <View style={styles.textCard}>
+                <Text style={styles.bioText}>{dev.experiencia}</Text>
+              </View>
+            </View>
+          ) : null}
+
           {/* Habilidades */}
           <View style={styles.section}>
             <SectionHeader title="Habilidades" />
@@ -196,6 +209,24 @@ export default function DesenvolvedorDetalheScreen() {
               </View>
             ) : (
               <EmptyHint text="Nenhuma certificação cadastrada." />
+            )}
+          </View>
+
+          {/* Projetos em que o dev foi aceito */}
+          <View style={styles.section}>
+            <SectionHeader title="Projetos" />
+            {dev.projetos.length > 0 ? (
+              <View style={styles.projetosGrid}>
+                {dev.projetos.map((p, i) => (
+                  <View key={i} style={styles.projetoCard}>
+                    <Ionicons name="briefcase-outline" size={18} color={Colors.primary} />
+                    <Text style={styles.projetoTitulo} numberOfLines={2}>{p.titulo}</Text>
+                    <Text style={styles.projetoStack} numberOfLines={1}>{p.stack}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <EmptyHint text="Nenhum projeto cadastrado." />
             )}
           </View>
 
@@ -358,5 +389,31 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontStyle: 'italic',
     paddingVertical: 4,
+  },
+
+  projetosGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  projetoCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: 14,
+    width: '47%',
+    gap: 8,
+  },
+  projetoTitulo: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.text,
+    lineHeight: 18,
+  },
+  projetoStack: {
+    fontSize: 11,
+    color: Colors.primary,
+    fontWeight: '600',
   },
 });

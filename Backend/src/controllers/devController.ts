@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { db } from '../db/db';
-import { desenvolvedor, usuario } from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { desenvolvedor, usuario, aplicacao, novoProjeto } from '../db/schema';
+import { and, eq } from 'drizzle-orm';
 
 export const buscarDesenvolvedorPorId = async (req: Request, res: Response) => {
   const id = Number(req.params['id']);
@@ -24,7 +24,15 @@ export const buscarDesenvolvedorPorId = async (req: Request, res: Response) => {
       .where(eq(desenvolvedor.idDev, id));
 
     if (!dev) return res.status(404).json({ mensagem: 'Desenvolvedor não encontrado.' });
-    return res.status(200).json(dev);
+
+    // Projetos em que o dev foi aceito
+    const projetos = await db
+      .select({ titulo: novoProjeto.titulo, stack: novoProjeto.stack })
+      .from(aplicacao)
+      .innerJoin(novoProjeto, eq(aplicacao.idProjeto, novoProjeto.idProjeto))
+      .where(and(eq(aplicacao.idDev, id), eq(aplicacao.status, 'aceito')));
+
+    return res.status(200).json({ ...dev, projetos });
   } catch (error) {
     return res.status(500).json({ mensagem: 'Erro ao buscar desenvolvedor.', error });
   }

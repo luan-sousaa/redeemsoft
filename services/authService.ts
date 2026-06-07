@@ -212,6 +212,7 @@ export const authService = {
     habilidades: string | null;
     certificacoes: string | null;
     experiencia: string | null;
+    projetos: { titulo: string; stack: string }[];
   }> {
     return api.get(`/desenvolvedores/${id}`);
   },

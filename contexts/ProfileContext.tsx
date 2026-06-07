@@ -53,20 +53,36 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     ])
       .then(([apiProfile, storedFoto, storedProjetos, storedHabilidades, storedCertificados]) => {
         if (cancelled) return;
+
+        const habilidades = storedHabilidades
+          ? (JSON.parse(storedHabilidades) as string[])
+          : apiProfile.habilidades;
+        const certificados = storedCertificados
+          ? (JSON.parse(storedCertificados) as string[])
+          : apiProfile.certificados;
+
         setProfile({
           ...apiProfile,
           fotoUri: storedFoto ?? apiProfile.fotoUri,
           projetoFotos: storedProjetos
             ? (JSON.parse(storedProjetos) as (string | null)[])
             : apiProfile.projetoFotos,
-          // AsyncStorage tem prioridade sobre a API — mesmo padrão dos projetos/foto
-          habilidades: storedHabilidades
-            ? (JSON.parse(storedHabilidades) as string[])
-            : apiProfile.habilidades,
-          certificados: storedCertificados
-            ? (JSON.parse(storedCertificados) as string[])
-            : apiProfile.certificados,
+          habilidades,
+          certificados,
         });
+
+        // Auto-sync: se backend tem habilidades/certificados vazios mas AsyncStorage tem dados,
+        // sincroniza agora — garante que a empresa veja os dados do dev sem ele precisar
+        // re-salvar manualmente após migração do banco
+        const deveSync =
+          (apiProfile.habilidades.length === 0 && habilidades.length > 0) ||
+          (apiProfile.certificados.length === 0 && certificados.length > 0);
+
+        if (deveSync) {
+          profileService
+            .update({ sobreMim: apiProfile.sobreMim, habilidades, certificados })
+            .catch(() => {});
+        }
       })
       .catch((e) => {
         if (!cancelled) console.error('[ProfileContext] Erro ao carregar perfil:', e);
