@@ -147,15 +147,15 @@ async function handleRegister() {
 
   try {
 
-    await register({ 
-      nome: name.trim(), 
-      email: email.trim(), 
-      senha: password, 
-      type: userType, 
-      cidade: city?.trim(), 
-      estado: state?.trim(), 
-      cpfCnpj: cpfCnpj?.replace(/\D/g, '') 
-    } as any);
+    await register({
+      name: name.trim(),
+      email: email.trim(),
+      password,
+      type: userType,
+      city: city.trim(),
+      state: state.trim(),
+      cpfCnpj: cpfCnpj.replace(/\D/g, ''),
+    });
 
     Toast.show({
       type: 'success',

@@ -16,6 +16,7 @@ export type RegisterData = {
   type: 'client' | 'developer';
   city: string;
   state: string;
+  cpfCnpj?: string;
 };
 
 export type Candidatura = {
@@ -110,6 +111,7 @@ export const authService = {
       type: data.type,
       cidade: data.city,
       estado: data.state,
+      cpfCnpj: data.cpfCnpj,
     });
     return { token: res.token, user: mapUser(res.user, parseJwtPayload(res.token)) };
   },
