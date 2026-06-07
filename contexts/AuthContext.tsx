@@ -11,7 +11,8 @@ type AuthState = {
 
 type AuthAction =
   | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_USER'; payload: User | null };
+  | { type: 'SET_USER'; payload: User | null }
+  | { type: 'UPDATE_USER'; payload: Partial<User> };
 
 function authReducer(state: AuthState, action: AuthAction): AuthState {
   switch (action.type) {
@@ -19,6 +20,8 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
       return { ...state, isLoading: action.payload };
     case 'SET_USER':
       return { ...state, user: action.payload, isAuthenticated: action.payload !== null, isLoading: false };
+    case 'UPDATE_USER':
+      return { ...state, user: state.user ? { ...state.user, ...action.payload } : state.user };
     default:
       return state;
   }
@@ -29,6 +32,7 @@ type AuthContextValue = AuthState & {
   loginWithGoogle: (token: string) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
+  updateUser: (data: Partial<User>) => void;
   forgotPassword: (email: string) => Promise<void>;
   verifyCode: (email: string, code: string) => Promise<void>;
   resetPassword: (email: string, code: string, newPassword: string) => Promise<void>;
@@ -64,6 +68,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(token, user);
   }
 
+  function updateUser(data: Partial<User>) {
+    dispatch({ type: 'UPDATE_USER', payload: data });
+  }
+
   function logout() {
     tokenStorage.remove();
     profileService.clearCache();
@@ -83,7 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ ...state, login, loginWithGoogle, register, logout, forgotPassword, verifyCode, resetPassword }}>
+    <AuthContext.Provider value={{ ...state, login, loginWithGoogle, register, logout, updateUser, forgotPassword, verifyCode, resetPassword }}>
       {children}
     </AuthContext.Provider>
   );

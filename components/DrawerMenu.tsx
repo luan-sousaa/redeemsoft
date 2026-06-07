@@ -126,10 +126,10 @@ export function DrawerMenu({
       active: activeScreen === 'home',
     },
     {
-      icon: 'person-outline',
+      icon: 'business-outline',
       label: 'Meu Perfil',
-      onPress: () => { onClose(); router.push('/(app)/sobre-mim' as Href); },
-      active: activeScreen === 'sobre-mim',
+      onPress: () => { onClose(); router.push('/(app)/perfil-empresa' as Href); },
+      active: activeScreen === 'perfil-empresa',
     },
     {
       icon: 'chatbubble-outline',
@@ -167,8 +167,8 @@ export function DrawerMenu({
     {
       icon: 'settings-outline',
       label: 'Configurações',
-      onPress: () => { onClose(); router.push('/(app)/configuracoes' as Href); },
-      active: activeScreen === 'configuracoes',
+      onPress: () => { onClose(); router.push('/(app)/configuracoes-empresa' as Href); },
+      active: activeScreen === 'configuracoes-empresa',
     },
   ];
 

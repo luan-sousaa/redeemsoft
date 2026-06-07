@@ -34,6 +34,14 @@ export const cliente = sqliteTable("cliente",{
     .notNull()
     .references(() => usuario.idUsuario),
   empresa: text("empresa"),
+  descricao: text("descricao"),
+  segmento: text("segmento"),
+  tamanho: text("tamanho"),
+  site: text("site"),
+  anoFundacao: text("anoFundacao"),
+  cidade: text("cidade"),
+  estado: text("estado"),
+  modalidadePreferida: text("modalidadePreferida"),
 });
 
 

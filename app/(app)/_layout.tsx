@@ -17,6 +17,8 @@ export default function AppLayout() {
       <Stack.Screen name="editar-habilidades" />
       <Stack.Screen name="editar-certificados" />
       <Stack.Screen name="editar-perfil" />
+      <Stack.Screen name="configuracoes-empresa" />
+      <Stack.Screen name="perfil-empresa" />
     </Stack>
   );
 }

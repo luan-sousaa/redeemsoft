@@ -6,7 +6,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -87,6 +87,13 @@ function Section({
 export default function ConfiguracoesScreen() {
   const router = useRouter();
   const { user, logout } = useAuth();
+
+  // Redireciona empresas para a tela de configurações específica
+  useEffect(() => {
+    if (user?.type === 'client') {
+      router.replace('/(app)/configuracoes-empresa' as Href);
+    }
+  }, [user?.type]);
 
   const editarPerfilItems: ConfigItem[] = [
     {
