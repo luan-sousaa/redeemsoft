@@ -70,7 +70,7 @@ export default function VerifyCodeScreen() {
     setIsLoading(true);
     try {
       await verifyCode(email ?? '', fullCode);
-      router.replace('/(auth)/reset-password' as Href);
+      router.replace({ pathname: '/(auth)/reset-password', params: { email, code: fullCode } } as Href);
     } catch (e: unknown) {
       Toast.show({
         type: 'error',

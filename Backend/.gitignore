@@ -2,7 +2,8 @@
 node_modules/
 
 # Banco de Dados Local (SQLite)
-Backend/src/db/news.db
+src/db/news.db
+*.db
 
 # Configurações de ambiente
 .env

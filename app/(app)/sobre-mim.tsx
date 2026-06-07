@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
+  ActionSheetIOS,
+  Alert,
   Dimensions,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -16,25 +18,77 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
+
 import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAvatar } from '@/hooks/use-avatar';
-import Head from 'expo-router/head';  
+import { profileService } from '@/services/profileService';
 
 const { width } = Dimensions.get('window');
 const GRID_GAP = 12;
 const GRID_PADDING = 24;
 const CELL_SIZE = (width - GRID_PADDING * 2 - GRID_GAP) / 2;
 
-// ─── Célula de projeto (imagem/placeholder) ───────────────────────────────────
+async function pickFromGallery(): Promise<string | null> {
+  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (status !== 'granted') {
+    Alert.alert('Permissão necessária', 'Permita o acesso à galeria nas configurações do dispositivo.');
+    return null;
+  }
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    allowsEditing: true,
+    aspect: [1, 1],
+    quality: 0.8,
+  });
+  if (result.canceled) return null;
+  return result.assets[0].uri;
+}
 
-function ProjetoCell({ index, imageUri }: { index: number; imageUri?: string }) {
+async function pickFromCamera(): Promise<string | null> {
+  const { status } = await ImagePicker.requestCameraPermissionsAsync();
+  if (status !== 'granted') {
+    Alert.alert('Permissão necessária', 'Permita o acesso à câmera nas configurações do dispositivo.');
+    return null;
+  }
+  const result = await ImagePicker.launchCameraAsync({
+    allowsEditing: true,
+    aspect: [1, 1],
+    quality: 0.8,
+  });
+  if (result.canceled) return null;
+  return result.assets[0].uri;
+}
+
+function showImageSourcePicker(onPick: (uri: string | null) => void) {
+  if (Platform.OS === 'ios') {
+    ActionSheetIOS.showActionSheetWithOptions(
+      { options: ['Cancelar', 'Câmera', 'Galeria'], cancelButtonIndex: 0 },
+      async (idx) => {
+        if (idx === 1) onPick(await pickFromCamera());
+        else if (idx === 2) onPick(await pickFromGallery());
+      }
+    );
+  } else {
+    Alert.alert('Foto de perfil', 'Escolha a origem', [
+      { text: 'Cancelar', style: 'cancel', onPress: () => onPick(null) },
+      { text: 'Câmera', onPress: async () => onPick(await pickFromCamera()) },
+      { text: 'Galeria', onPress: async () => onPick(await pickFromGallery()) },
+    ]);
+  }
+}
+
+// ─── Célula de projeto ────────────────────────────────────────────────────────
+
+function ProjetoCell({ uri, onPress }: { uri: string | null; onPress: () => void }) {
   return (
-    <Pressable style={styles.projetoCell}>
-      {imageUri ? null : (
+    <Pressable style={styles.projetoCell} onPress={onPress}>
+      {uri ? (
+        <Image source={{ uri }} style={styles.projetoCellImage} />
+      ) : (
         <View style={styles.projetoCellEmpty}>
           <Ionicons name="add-outline" size={28} color={Colors.textSecondary} />
+          <Text style={styles.projetoCellLabel}>Adicionar</Text>
         </View>
       )}
     </Pressable>
@@ -46,41 +100,62 @@ function ProjetoCell({ index, imageUri }: { index: number; imageUri?: string }) 
 export default function SobreMimScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const { avatarUri, pickAvatar, isPickerLoading } = useAvatar(user?.idUsuario);
 
   const [sobre, setSobre] = useState('');
+  const [fotoUri, setFotoUri] = useState<string | null>(null);
+  const [projetoFotos, setProjetoFotos] = useState<(string | null)[]>([null, null, null, null]);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    profileService.get().then((p) => {
+      setSobre(p.sobreMim);
+      setFotoUri(p.fotoUri);
+      setProjetoFotos(p.projetoFotos.length === 4 ? p.projetoFotos : [null, null, null, null]);
+    });
+  }, []);
+
+  function handleFotoPress() {
+    showImageSourcePicker((uri) => {
+      if (uri) setFotoUri(uri);
+    });
+  }
+
+  async function handleProjetoCellPress(index: number) {
+    const uri = await pickFromGallery();
+    if (uri) {
+      setProjetoFotos((prev) => {
+        const next = [...prev];
+        next[index] = uri;
+        return next;
+      });
+    }
+  }
 
   async function handleSalvar() {
     setIsLoading(true);
-    // Simula salvamento
-    await new Promise((r) => setTimeout(r, 800));
-    setIsLoading(false);
-    Toast.show({
-      type: 'success',
-      text1: 'Perfil atualizado!',
-      text2: 'Suas informações foram salvas.',
-    });
-    router.back();
+    try {
+      await profileService.update({ sobreMim: sobre, fotoUri, projetoFotos });
+      Toast.show({ type: 'success', text1: 'Perfil atualizado!', text2: 'Suas informações foram salvas.' });
+      router.back();
+    } catch {
+      Toast.show({ type: 'error', text1: 'Erro ao salvar', text2: 'Tente novamente.' });
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
     <SafeAreaView style={styles.safe}>
-      <Head>
-                    <title> Sobre Mim | RedeemSoft</title>
-                    <meta name="description" content="Seu perfil no RedeemSoft" />
-                  </Head>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        {/* Header */}
         <View style={styles.header}>
           <Pressable style={styles.backBtn} onPress={() => router.back()}>
             <Ionicons name="arrow-back-circle-outline" size={30} color={Colors.text} />
           </Pressable>
           <Text style={styles.headerTitle} numberOfLines={1}>
-            {user?.nome ?? 'Nome Prestador'}
+            {user?.name ?? 'Nome Prestador'}
           </Text>
         </View>
 
@@ -89,24 +164,21 @@ export default function SobreMimScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Foto */}
+          {/* Foto de perfil */}
           <View style={styles.photoSection}>
-            <Pressable style={styles.photoContainer} onPress={pickAvatar} disabled={isPickerLoading}>
-              {avatarUri ? (
-                <Image source={{ uri: avatarUri }} style={styles.photoImage} contentFit="cover" />
+            <Pressable style={styles.photoContainer} onPress={handleFotoPress}>
+              {fotoUri ? (
+                <Image source={{ uri: fotoUri }} style={styles.photoImage} />
               ) : (
                 <View style={styles.photoPlaceholder}>
                   <Ionicons name="camera-outline" size={32} color={Colors.textSecondary} />
                   <Text style={styles.photoLabel}>Foto</Text>
                 </View>
               )}
-              {isPickerLoading && (
-                <View style={styles.photoOverlay}>
-                  <ActivityIndicator color={Colors.primary} />
-                </View>
-              )}
+              <View style={styles.cameraOverlay}>
+                <Ionicons name="camera" size={14} color={Colors.text} />
+              </View>
             </Pressable>
-            <Text style={styles.photoHint}>Toque para alterar</Text>
           </View>
 
           {/* Sobre */}
@@ -127,18 +199,13 @@ export default function SobreMimScreen() {
           {/* Projetos */}
           <Text style={styles.projetosLabel}>Projetos:</Text>
           <View style={styles.projetosGrid}>
-            {[0, 1, 2, 3].map((i) => (
-              <ProjetoCell key={i} index={i} />
+            {projetoFotos.map((uri, i) => (
+              <ProjetoCell key={i} uri={uri} onPress={() => handleProjetoCellPress(i)} />
             ))}
           </View>
 
-          {/* Botão salvar */}
           <View style={styles.saveContainer}>
-            <Button
-              title="Salvar alterações"
-              onPress={handleSalvar}
-              isLoading={isLoading}
-            />
+            <Button title="Salvar alterações" onPress={handleSalvar} isLoading={isLoading} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -146,16 +213,9 @@ export default function SobreMimScreen() {
   );
 }
 
-// ─── Estilos ──────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
+  safe: { flex: 1, backgroundColor: Colors.background },
   flex: { flex: 1 },
-
-  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -165,27 +225,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  backBtn: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 20,
-    fontWeight: '800',
-    color: Colors.text,
-  },
+  backBtn: { alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { flex: 1, fontSize: 20, fontWeight: '800', color: Colors.text },
+  scroll: { padding: GRID_PADDING, paddingBottom: 48 },
 
-  scroll: {
-    padding: GRID_PADDING,
-    paddingBottom: 48,
-  },
-
-  // Foto
-  photoSection: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
+  photoSection: { alignItems: 'center', marginBottom: 24 },
   photoContainer: {
     width: 120,
     height: 120,
@@ -196,34 +240,21 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     borderStyle: 'dashed',
   },
-  photoImage: {
-    width: '100%',
-    height: '100%',
-  },
-  photoPlaceholder: {
-    flex: 1,
+  photoImage: { width: '100%', height: '100%' },
+  photoPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6 },
+  photoLabel: { fontSize: 14, color: Colors.textSecondary, fontWeight: '500' },
+  cameraOverlay: {
+    position: 'absolute',
+    bottom: 6,
+    right: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-  },
-  photoLabel: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    fontWeight: '500',
-  },
-  photoOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  photoHint: {
-    marginTop: 8,
-    fontSize: 12,
-    color: Colors.textSecondary,
   },
 
-  // Sobre
   sobreContainer: {
     backgroundColor: Colors.surface,
     borderRadius: 14,
@@ -234,26 +265,10 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     minHeight: 120,
   },
-  sobreInput: {
-    fontSize: 15,
-    color: Colors.text,
-    lineHeight: 22,
-    minHeight: 96,
-  },
+  sobreInput: { fontSize: 15, color: Colors.text, lineHeight: 22, minHeight: 96 },
 
-  // Projetos grid
-  projetosLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: Colors.text,
-    marginBottom: 12,
-  },
-  projetosGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: GRID_GAP,
-    marginBottom: 32,
-  },
+  projetosLabel: { fontSize: 15, fontWeight: '600', color: Colors.text, marginBottom: 12 },
+  projetosGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP, marginBottom: 32 },
   projetoCell: {
     width: CELL_SIZE,
     height: CELL_SIZE,
@@ -263,13 +278,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     overflow: 'hidden',
   },
-  projetoCellEmpty: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  saveContainer: {
-    marginTop: 8,
-  },
+  projetoCellImage: { width: '100%', height: '100%' },
+  projetoCellEmpty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6 },
+  projetoCellLabel: { fontSize: 12, color: Colors.textSecondary, fontWeight: '500' },
+  saveContainer: { marginTop: 8 },
 });

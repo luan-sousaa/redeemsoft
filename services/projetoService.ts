@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'https://photography-enhancements-reserved-gregory.trycloudflare.com';
+const API_URL = 'https://redeemsoft-backend-production.up.railway.app';
 
 const api = axios.create({
   baseURL: API_URL,

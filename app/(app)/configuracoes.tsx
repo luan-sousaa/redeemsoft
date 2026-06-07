@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import React from 'react';
@@ -14,8 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors } from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAvatar } from '@/hooks/use-avatar';
-import Head from 'expo-router/head';
+
 // ─── Item de configuração ─────────────────────────────────────────────────────
 
 type ConfigItem = {
@@ -84,7 +82,6 @@ function Section({
 export default function ConfiguracoesScreen() {
   const router = useRouter();
   const { user, logout } = useAuth();
-  const { avatarUri } = useAvatar(user?.idUsuario);
 
   const editarPerfilItems: ConfigItem[] = [
     {
@@ -95,17 +92,17 @@ export default function ConfiguracoesScreen() {
     {
       label: 'Habilidades',
       icon: 'code-slash-outline',
-      onPress: () => {},
+      onPress: () => router.push('/(app)/editar-habilidades' as Href),
     },
     {
       label: 'Certificados',
       icon: 'ribbon-outline',
-      onPress: () => {},
+      onPress: () => router.push('/(app)/editar-certificados' as Href),
     },
     {
       label: 'Projetos',
       icon: 'briefcase-outline',
-      onPress: () => router.push('/(app)/meus-projetos' as Href),
+      onPress: () => router.push('/(app)/sobre-mim' as Href),
     },
   ];
 
@@ -125,11 +122,6 @@ export default function ConfiguracoesScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-
-      <Head>
-                          <title> Configurações | RedeemSoft</title>
-                          <meta name="description" content="Gerencie suas configurações no RedeemSoft" />
-                        </Head>
       {/* Header */}
       <View style={styles.header}>
         <Pressable style={styles.backBtn} onPress={() => router.back()}>
@@ -146,16 +138,12 @@ export default function ConfiguracoesScreen() {
         {/* Avatar resumido */}
         <View style={styles.profileCard}>
           <View style={styles.avatar}>
-            {avatarUri ? (
-              <Image source={{ uri: avatarUri }} style={styles.avatarImage} contentFit="cover" />
-            ) : (
-              <Text style={styles.avatarLetter}>
-                {user?.nome?.charAt(0).toUpperCase() ?? '?'}
-              </Text>
-            )}
+            <Text style={styles.avatarLetter}>
+              {user?.name?.charAt(0).toUpperCase() ?? '?'}
+            </Text>
           </View>
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{user?.nome}</Text>
+            <Text style={styles.profileName}>{user?.name}</Text>
             <Text style={styles.profileEmail}>{user?.email}</Text>
           </View>
           <Pressable
@@ -236,12 +224,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  avatarImage: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
   },
   avatarLetter: {
     fontSize: 22,

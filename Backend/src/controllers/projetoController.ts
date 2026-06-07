@@ -1,148 +1,131 @@
-import {Request, Response} from 'express';
+import type { Request, Response } from 'express';
 import { db } from '../db/db';
-import {novoProjeto, cliente, usuario, aplicacao, desenvolvedor} from '../db/schema';
+import { novoProjeto, cliente, usuario, aplicacao, desenvolvedor } from '../db/schema';
 import { eq } from 'drizzle-orm';
 
+async function buildProjetosFormatados(projetos: typeof novoProjeto.$inferSelect[]) {
+  if (projetos.length === 0) return [];
 
+  const todasAplicacoes = await db
+    .select({ aplicacao, dev: desenvolvedor, nomeDev: usuario.nome })
+    .from(aplicacao)
+    .innerJoin(desenvolvedor, eq(aplicacao.idDev, desenvolvedor.idDev))
+    .innerJoin(usuario, eq(desenvolvedor.idUsuario, usuario.idUsuario));
+
+  return projetos.map((p) => ({
+    ...p,
+    candidaturas: todasAplicacoes
+      .filter((a) => a.aplicacao.idProjeto === p.idProjeto)
+      .map((a) => ({
+        idAplicacao: a.aplicacao.idAplicacao,
+        idDev: a.aplicacao.idDev,
+        proposta: a.aplicacao.proposta,
+        status: a.aplicacao.status,
+        desenvolvedor: { nome: a.nomeDev, experiencia: a.dev.experiencia },
+      })),
+  }));
+}
 
 export const encontrarProjeto = async (req: Request, res: Response) => {
-    try {
+  try {
+    const rows = await db
+      .select({ projeto: novoProjeto, nomeCliente: usuario.nome, empresa: cliente.empresa })
+      .from(novoProjeto)
+      .innerJoin(cliente, eq(novoProjeto.idCliente, cliente.idCliente))
+      .innerJoin(usuario, eq(cliente.idUsuario, usuario.idUsuario));
 
-        const projetosQuery = await db
-            .select({
-                projeto: novoProjeto,
-                cliente: cliente,
-                dono: usuario
-            })
-            .from(novoProjeto)
-            .innerJoin(cliente, eq(novoProjeto.idCliente, cliente.idCliente))
-            .innerJoin(usuario, eq(cliente.idUsuario, usuario.idUsuario));
+    const projetos = rows.map((r) => r.projeto);
+    const formatados = await buildProjetosFormatados(projetos);
+    const comCliente = formatados.map((p, i) => ({
+      ...p,
+      nomeCliente: rows[i]?.nomeCliente,
+      empresa: rows[i]?.empresa,
+    }));
 
-            const aplicacoesQuery = await db
-            .select({
-                aplicacao: aplicacao,
-                dev: desenvolvedor,
-                nomeDev: usuario.nome,
-                emailDev: usuario.email
-            })
-            .from(aplicacao)
-            .innerJoin(desenvolvedor, eq(aplicacao.idDev, desenvolvedor.idDev))
-            .innerJoin(usuario, eq(desenvolvedor.idUsuario, usuario.idUsuario));
+    return res.status(200).json(comCliente);
+  } catch (error) {
+    console.error('ERRO AO BUSCAR PROJETOS:', error);
+    return res.status(500).json({ mensagem: 'Erro ao encontrar projetos.' });
+  }
+};
 
-        const projetosFormatados = projetosQuery.map((row) => {
-            
-            const candidaturasDoProjeto = aplicacoesQuery
-                .filter((app) => app.aplicacao.idProjeto === row.projeto.idProjeto)
-                .map((app) => ({
-                    idAplicacao: app.aplicacao.idAplicacao,
-                    idDev: app.aplicacao.idDev,
-                    proposta: app.aplicacao.proposta,
-                    status: app.aplicacao.status,
+export const encontrarProjetosMeus = async (req: Request, res: Response) => {
+  const idCliente = req.user?.idCliente;
+  if (!idCliente) {
+    return res.status(403).json({ mensagem: 'Apenas empresas podem acessar esta rota.' });
+  }
 
-                    projeto: {
-                        titulo: row.projeto.titulo,
-                        prazo: row.projeto.prazo,
-                    },
-                    desenvolvedor: {
-                        nome: app.nomeDev,
-                        email: app.emailDev,
-                        experiencia: app.dev.experiencia,
-                    },
-                }));
-
-            return {
-                ...row.projeto,
-                nomeCliente: row.dono.nome,
-                empresa: row.cliente.empresa,
-                candidaturas: candidaturasDoProjeto,
-            };
-        });
-
-        res.status(200).json(projetosFormatados);
-
-    } catch (error) {
-        console.error("🚨 ERRO AO BUSCAR PROJETOS:", error);
-        res.status(500).json({ mensagem: "Erro ao encontrar projetos. Contate o administrador." });
-    }
+  try {
+    const rows = await db.select().from(novoProjeto).where(eq(novoProjeto.idCliente, idCliente));
+    const formatados = await buildProjetosFormatados(rows);
+    return res.status(200).json(formatados);
+  } catch (error) {
+    console.error('ERRO AO BUSCAR MEUS PROJETOS:', error);
+    return res.status(500).json({ mensagem: 'Erro ao buscar seus projetos.' });
+  }
 };
 
 export const criarProjeto = async (req: Request, res: Response) => {
+  const { titulo, descricao, orcamento, prazo, modalidades, stack } = req.body;
+  const idCliente = req.user?.idCliente;
 
-    const { titulo, descricao, orcamento, prazo, modalidades, stack, idUsuario } = req.body;
+  if (!idCliente) {
+    return res.status(403).json({ mensagem: 'Apenas empresas podem criar projetos.' });
+  }
 
-    if (!idUsuario) {
-        return res.status(401).json({ 
-            mensagem: "Acesso Negado: ID do usuário não informado. Faça login para criar um projeto." 
-        });
-    }
+  let modalidadeFormatada: 'presencial' | 'remoto' | 'híbrido' = 'remoto';
+  const modalidade = Array.isArray(modalidades) ? modalidades[0] : modalidades;
+  if (modalidade === 'P') modalidadeFormatada = 'presencial';
+  else if (modalidade === 'SP') modalidadeFormatada = 'híbrido';
+  else if (modalidade === 'H') modalidadeFormatada = 'remoto';
 
-    let modalidadeFormatada = modalidades;
-    if (Array.isArray(modalidades)) {
-        modalidadeFormatada = modalidades[0];
-    }
-    if (modalidadeFormatada === 'SP') modalidadeFormatada = 'híbrido';
-    if (modalidadeFormatada === 'P') modalidadeFormatada = 'presencial';
-    if (modalidadeFormatada === 'H') modalidadeFormatada = 'remoto';
+  try {
+    const [novo] = await db
+      .insert(novoProjeto)
+      .values({
+        idCliente,
+        titulo,
+        descricao,
+        orcamento: Number(orcamento),
+        prazo: parseInt(String(prazo)) || 0,
+        modalidade: modalidadeFormatada,
+        stack,
+      })
+      .returning();
 
-    try {
-
-        const [clienteEncontrado] = await db.select()
-            .from(cliente)
-            .where(eq(cliente.idUsuario, Number(idUsuario)));
-
-        if (!clienteEncontrado) {
-            return res.status(404).json({ mensagem: "Perfil de cliente não encontrado para este usuário." });
-        }
-
-        const [novoProjetoCriado] = await db.insert(novoProjeto).values({
-            idCliente: clienteEncontrado.idCliente, 
-            titulo,
-            descricao,
-            orcamento: Number(orcamento),
-            prazo: Number(prazo), 
-            modalidade: modalidadeFormatada, 
-            stack
-        }).returning();
-        
-        return res.status(201).json(novoProjetoCriado);
-        
-    } catch (error) {
-        console.error("🚨 ERRO FATAL AO SALVAR PROJETO NO BANCO:", error); 
-        return res.status(500).json({ mensagem: "Erro ao criar projeto.", erroReal: error });
-    }
+    return res.status(201).json(novo);
+  } catch (error) {
+    console.error('ERRO AO SALVAR PROJETO:', error);
+    return res.status(500).json({ mensagem: 'Erro ao criar projeto.', erroReal: String(error) });
+  }
 };
 
-export const atualizarProjeto = async (req: Request, res: Response)=> {
-    
-    const {id} = req.params;
-    
-    const {idCliente} = req.body;  
-    const {titulo} = req.body;
-    const {descricao} = req.body; 
-    const {orcamento} = req.body;
-    const {prazo} = req.body;
-    const {modalidade} = req.body;
-    const {stack} = req.body;
+export const atualizarProjeto = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { titulo, descricao, orcamento, prazo, modalidade, stack } = req.body;
 
-    try{
+  try {
+    const [atualizado] = await db
+      .update(novoProjeto)
+      .set({ titulo, descricao, orcamento, prazo, modalidade, stack })
+      .where(eq(novoProjeto.idProjeto, Number(id)))
+      .returning();
 
-        const projetoAtualizado = await db.update(novoProjeto).set({idCliente, titulo, descricao, orcamento, prazo, modalidade, stack}).where(eq(novoProjeto.idProjeto, Number(id)))
-
-        .returning();
-        res.json(projetoAtualizado);
-    }catch(error){
-        res.status(500).json({mensagem: "Erro ao atualizar projeto. Contate o administrador."})
-    }
-}
+    return res.status(200).json(atualizado);
+  } catch (error) {
+    return res.status(500).json({ mensagem: 'Erro ao atualizar projeto.' });
+  }
+};
 
 export const deletarProjeto = async (req: Request, res: Response) => {
-
-    const {id} = req.params;    
-    try{
-        const projetoDeletado = await db.delete(novoProjeto).where(eq(novoProjeto.idProjeto, Number(id)))
-        .returning();
-        res.json(projetoDeletado);
-    }catch(error){
-        res.status(500).json({mensagem: "Erro ao deletar projeto. Contate o administrador."})
-    }
-}
+  const { id } = req.params;
+  try {
+    const [deletado] = await db
+      .delete(novoProjeto)
+      .where(eq(novoProjeto.idProjeto, Number(id)))
+      .returning();
+    return res.status(200).json(deletado);
+  } catch (error) {
+    return res.status(500).json({ mensagem: 'Erro ao deletar projeto.' });
+  }
+};

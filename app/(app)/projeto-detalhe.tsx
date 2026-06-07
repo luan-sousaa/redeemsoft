@@ -13,9 +13,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
+
 import { Colors } from '@/constants/colors';
 import { authService } from '@/services/authService';
-import { useAuth } from '@/contexts/AuthContext';
+
 // ─── Campo somente-leitura (estilo do protótipo) ──────────────────────────────
 
 function ReadonlyField({
@@ -82,25 +83,15 @@ export default function ProjetoDetalheScreen() {
     modalidades: string;
     linkRepositorio?: string;
   }>();
-  const { user } = useAuth();
 
   const [candidatando, setCandidatando] = useState(false);
   const [aceito, setAceito] = useState(false);
 
-  // Check on mount whether the developer already applied
   useEffect(() => {
-    async function checkCandidatura() {
-      if (!params.id || !user?.idUsuario) return;
-      try {
-        const resultado = await authService.jaCandidatou(params.id, user.idUsuario);
-        setAceito(resultado);
-      } catch {
-        setAceito(false);
-      }
+    if (params.id) {
+      authService.jaCandidatouAsync(params.id).then(setAceito).catch(() => {});
     }
-
-    checkCandidatura();
-  }, [params.id, user?.idUsuario]);
+  }, [params.id]);
 
   const precoFormatado = params.preco
     ? Number(params.preco).toLocaleString('pt-BR', {
@@ -124,7 +115,6 @@ export default function ProjetoDetalheScreen() {
     setCandidatando(true);
     try {
       await authService.candidatar({
-        idUsuario: user!.idUsuario,
         projetoId: params.id,
         titulo: params.titulo,
         stack: params.stack ?? '',

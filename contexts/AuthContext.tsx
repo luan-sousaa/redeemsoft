@@ -1,54 +1,24 @@
-import React, { createContext, useContext, useEffect, useReducer } from 'react';
-import { authService } from '@/services/authService';
+import React, { createContext, useContext, useReducer } from 'react';
+import { authService, type RegisterData, type User } from '@/services/authService';
+import { tokenStorage } from '@/services/api';
+import { profileService } from '@/services/profileService';
 
-type User = Record<string, unknown>;
-
-export interface Usuario {
-  idUsuario: number;
-  nome: string;
-  email: string;
-  senha: string;
-  type: 'client' | 'developer';
-  cidade?: string | null;
-  estado?: string | null;
-  cpfCnpj?: string | null;
-}
-
-export type RegisterData = {
-  idUsuario?: number;
-  nome: string;
-  email: string;
-  senha: string;
-  type: "client" | "developer";
-  cidade?: string;
-  estado?: string;
-  cpfCnpj?: string;
-};
-interface LoginResponse {
-  mensagem: string;
-  user: Usuario;
-};
 type AuthState = {
-  user: Usuario | null;
+  user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
 };
 
 type AuthAction =
   | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_USER'; payload: Usuario | null };
+  | { type: 'SET_USER'; payload: User | null };
 
 function authReducer(state: AuthState, action: AuthAction): AuthState {
   switch (action.type) {
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
     case 'SET_USER':
-      return {
-        ...state,
-        user: action.payload,
-        isAuthenticated: action.payload !== null,
-        isLoading: false,
-      };
+      return { ...state, user: action.payload, isAuthenticated: action.payload !== null, isLoading: false };
     default:
       return state;
   }
@@ -69,78 +39,47 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(authReducer, {
     user: null,
-    isLoading: true,
+    isLoading: false,
     isAuthenticated: false,
   });
 
-  useEffect(() => {
-    (async () => {
-      try {
-        
-        if (typeof (authService as any).getStoredUser === 'function') {
-          const user = await (authService as any).getStoredUser();
-          dispatch({ type: 'SET_USER', payload: user });
-        } else if (typeof (authService as any).getUser === 'function') {
-          const user = await (authService as any).getUser();
-          dispatch({ type: 'SET_USER', payload: user });
-        } else {
-
-          dispatch({ type: 'SET_LOADING', payload: false });
-        }
-      } catch (err) {
-        dispatch({ type: 'SET_LOADING', payload: false });
-      }
-    })();
-  }, []);
-
-  async function login(email: string, password: string) {
-
-    const response = (await authService.login(email, password)) as unknown as LoginResponse;
-    
-    const userData = response.user;
-    dispatch({ type: 'SET_USER', payload: response.user });
-  }
-
-  async function loginWithGoogle(token: string) {
-    if (typeof (authService as any).loginWithGoogle === 'function') {
-      const user = await (authService as any).loginWithGoogle(token);
-      dispatch({ type: 'SET_USER', payload: user });
-    } else {
-      throw new Error('authService.loginWithGoogle is not implemented');
-    }
-  }
-
-  async function register(data: RegisterData) {
-    const user = await authService.register(data);
+  function setUser(token: string, user: User) {
+    tokenStorage.save(token);
     dispatch({ type: 'SET_USER', payload: user });
   }
 
+  async function login(email: string, password: string) {
+    const { token, user } = await authService.login(email, password);
+    profileService.clearCache();
+    setUser(token, user);
+  }
+
+  async function loginWithGoogle(_token: string) {
+    throw new Error('Google Sign-In ainda não configurado.');
+  }
+
+  async function register(data: RegisterData) {
+    const { token, user } = await authService.register(data);
+    profileService.clearCache();
+    setUser(token, user);
+  }
+
   function logout() {
+    tokenStorage.remove();
+    profileService.clearCache();
     dispatch({ type: 'SET_USER', payload: null });
   }
 
   async function forgotPassword(email: string) {
-    if (typeof (authService as any).forgotPassword === 'function') {
-      await (authService as any).forgotPassword(email);
-    } else {
-      throw new Error('authService.forgotPassword is not implemented');
-    }
+    await authService.forgotPassword(email);
   }
 
   async function verifyCode(email: string, code: string) {
-    if (typeof (authService as any).verifyCode === 'function') {
-      await (authService as any).verifyCode(email, code);
-    } else {
-      throw new Error('authService.verifyCode is not implemented');
-    }
+    await authService.verifyCode(email, code);
   }
 
   async function resetPassword(email: string, code: string, newPassword: string) {
-    if (typeof (authService as any).resetPassword === 'function') {
-      await (authService as any).resetPassword(email, code, newPassword);
-    } else {
-      throw new Error('authService.resetPassword is not implemented');
-    }
+    await authService.resetPassword(email, code, newPassword);
   }
 
   return (

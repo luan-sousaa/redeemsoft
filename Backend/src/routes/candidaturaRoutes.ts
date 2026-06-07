@@ -1,17 +1,12 @@
 import { Router } from 'express';
-import {
-    criarCandidatura,
-    buscarMinhasCandidaturas,
-    checarCandidatura,
-    atualizarStatusCandidatura,
-} from '../controllers/candidaturaController';
+import { criarCandidatura, buscarMinhasCandidaturas, checarCandidatura, atualizarStatusCandidatura } from '../controllers/candidaturaController.js';
+import { authMiddleware } from '../middleware/auth.js';
 
 const router = Router();
 
-router.post('/candidaturas', criarCandidatura);
-router.get('/candidaturas/minhas', buscarMinhasCandidaturas);
-router.get('/candidaturas/check/:projetoId', checarCandidatura);
-router.patch('/projetos/:projetoId/candidaturas/:candidaturaId', atualizarStatusCandidatura);
-router.patch('/projetos/:projetoId/candidaturas/:candidaturaId/status', atualizarStatusCandidatura);
+router.post('/candidaturas', authMiddleware, criarCandidatura);
+router.get('/candidaturas/minhas', authMiddleware, buscarMinhasCandidaturas);
+router.get('/candidaturas/check/:projetoId', authMiddleware, checarCandidatura);
+router.patch('/projetos/:projetoId/candidaturas/:candidaturaId', authMiddleware, atualizarStatusCandidatura);
 
 export default router;

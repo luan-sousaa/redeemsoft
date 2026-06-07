@@ -15,7 +15,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '@/constants/colors';
 import { authService } from '@/services/authService';
 import { useAuth } from '@/contexts/AuthContext';
-import Head from 'expo-router/head';
 import { MinhaCandidatura } from '@/types';
 
 
@@ -135,10 +134,6 @@ export default function MinhasCandidaturasScreen() {
   return (
     <SafeAreaView style={styles.safe}>
 
-       <Head>
-              <title> Minhas Candidaturas | RedeemSoft</title>
-              <meta name="description" content="Veja suas candidaturas no RedeemSoft" />
-            </Head>
       {/* Header */}
       <View style={styles.header}>
         <Pressable style={styles.backBtn} onPress={() => router.back()}>

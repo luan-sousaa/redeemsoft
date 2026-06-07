@@ -1,5 +1,4 @@
 import { Stack } from 'expo-router';
-import React from 'react';
 
 export default function AppLayout() {
   return (
@@ -15,9 +14,8 @@ export default function AppLayout() {
       <Stack.Screen name="buscar-desenvolvedores" />
       <Stack.Screen name="desenvolvedor-detalhe" />
       <Stack.Screen name="chat-conversa" />
-      <Stack.Screen name="checkout" />
-      <Stack.Screen name="pagamento-pix" />
-      <Stack.Screen name="notificacoes" />
+      <Stack.Screen name="editar-habilidades" />
+      <Stack.Screen name="editar-certificados" />
     </Stack>
   );
 }

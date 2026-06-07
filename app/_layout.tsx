@@ -1,7 +1,7 @@
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments, useNavigationContainerRef } from 'expo-router';
 import type { Href } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
 
@@ -11,9 +11,18 @@ function RootLayoutNav() {
   const { isAuthenticated, isLoading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const navigationRef = useNavigationContainerRef();
+  const [navigatorReady, setNavigatorReady] = useState(false);
 
   useEffect(() => {
-    if (isLoading) return;
+    const unsubscribe = navigationRef.addListener('state', () => {
+      setNavigatorReady(true);
+    });
+    return unsubscribe;
+  }, [navigationRef]);
+
+  useEffect(() => {
+    if (!navigatorReady || isLoading) return;
 
     const inAuthGroup = (segments[0] as string) === '(auth)';
 
@@ -22,11 +31,7 @@ function RootLayoutNav() {
     } else if (!isAuthenticated && !inAuthGroup) {
       router.replace('/(auth)/login' as Href);
     }
-  }, [isAuthenticated, isLoading, segments]);
-
-  if (isLoading) {
-    return null;
-  }
+  }, [navigatorReady, isAuthenticated, isLoading, segments]);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>

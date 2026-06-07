@@ -1,143 +1,117 @@
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { db } from '../db/db';
-import { desenvolvedor, usuario, aplicacao, novoProjeto } from '../db/schema';
+import { desenvolvedor, usuario } from '../db/schema';
 import { eq } from 'drizzle-orm';
 
 export const encontrarDesenvolvedores = async (req: Request, res: Response) => {
-    try {
-        const devsQuery = await db
-            .select({
-                perfil: desenvolvedor,
-                usuario: {
-                    nome: usuario.nome,
-                    email: usuario.email,
-                    cidade: usuario.cidade,
-                    estado: usuario.estado
-                }
-            })
-            .from(desenvolvedor)
-            .innerJoin(usuario, eq(desenvolvedor.idUsuario, usuario.idUsuario));
+  try {
+    const devs = await db
+      .select({
+        idDev: desenvolvedor.idDev,
+        idUsuario: desenvolvedor.idUsuario,
+        precoPorHora: desenvolvedor.precoPorHora,
+        sobreMim: desenvolvedor.sobreMim,
+        habilidades: desenvolvedor.habilidades,
+        certificacoes: desenvolvedor.certificacoes,
+        experiencia: desenvolvedor.experiencia,
+        nome: usuario.nome,
+        email: usuario.email,
+        cidade: usuario.cidade,
+        estado: usuario.estado,
+      })
+      .from(desenvolvedor)
+      .innerJoin(usuario, eq(desenvolvedor.idUsuario, usuario.idUsuario));
 
-        res.status(200).json(devsQuery);
+    return res.status(200).json(devs);
+  } catch (error) {
+    console.error('ERRO AO BUSCAR DESENVOLVEDORES:', error);
+    return res.status(500).json({ mensagem: 'Erro ao listar desenvolvedores.' });
+  }
+};
 
-    } catch (error) {
-        console.error("🚨 ERRO AO BUSCAR DESENVOLVEDORES:", error);
-        res.status(500).json({ mensagem: "Erro ao listar desenvolvedores." });
-    }
+export const buscarPerfilMeu = async (req: Request, res: Response) => {
+  const idDev = req.user?.idDev;
+  if (!idDev) return res.status(403).json({ mensagem: 'Apenas desenvolvedores podem acessar esta rota.' });
+
+  try {
+    const [perfil] = await db.select().from(desenvolvedor).where(eq(desenvolvedor.idDev, idDev));
+    if (!perfil) return res.status(404).json({ mensagem: 'Perfil não encontrado.' });
+    return res.status(200).json(perfil);
+  } catch (error) {
+    return res.status(500).json({ mensagem: 'Erro ao buscar perfil.', error });
+  }
+};
+
+export const atualizarPerfilMeu = async (req: Request, res: Response) => {
+  const idDev = req.user?.idDev;
+  if (!idDev) return res.status(403).json({ mensagem: 'Apenas desenvolvedores podem acessar esta rota.' });
+
+  const { precoPorHora, sobreMim, habilidades, certificacoes, experiencia } = req.body;
+
+  try {
+    const [atualizado] = await db
+      .update(desenvolvedor)
+      .set({
+        precoPorHora: precoPorHora ? Number(precoPorHora) : undefined,
+        sobreMim,
+        habilidades,
+        certificacoes,
+        experiencia,
+      })
+      .where(eq(desenvolvedor.idDev, idDev))
+      .returning();
+
+    if (!atualizado) return res.status(404).json({ mensagem: 'Perfil não encontrado.' });
+    return res.status(200).json(atualizado);
+  } catch (error) {
+    console.error('ERRO AO ATUALIZAR PERFIL:', error);
+    return res.status(500).json({ mensagem: 'Erro ao atualizar perfil.', error });
+  }
 };
 
 export const criarPerfilDev = async (req: Request, res: Response) => {
-    const { idUsuario, precoPorHora, sobreMim, habilidades, certificacoes, experiencia } = req.body;
+  const { idUsuario, precoPorHora, sobreMim, habilidades, certificacoes, experiencia } = req.body;
+  if (!idUsuario) return res.status(401).json({ mensagem: 'ID do usuário não informado.' });
 
-    if (!idUsuario) {
-        return res.status(401).json({ 
-            mensagem: "ID do usuário não informado. É necessário um usuário válido para criar o perfil." 
-        });
-    }
+  try {
+    const [existente] = await db.select().from(desenvolvedor).where(eq(desenvolvedor.idUsuario, Number(idUsuario)));
+    if (existente) return res.status(400).json({ mensagem: 'Perfil de desenvolvedor já existe.' });
 
-    try {
+    const [novo] = await db
+      .insert(desenvolvedor)
+      .values({ idUsuario: Number(idUsuario), precoPorHora, sobreMim, habilidades, certificacoes, experiencia })
+      .returning();
 
-        const [usuarioEncontrado] = await db.select()
-            .from(usuario)
-            .where(eq(usuario.idUsuario, Number(idUsuario)));
-
-        if (!usuarioEncontrado) {
-            return res.status(404).json({ mensagem: "Usuário não encontrado no sistema." });
-        }
-
-        const [perfilExistente] = await db.select()
-            .from(desenvolvedor)
-            .where(eq(desenvolvedor.idUsuario, Number(idUsuario)));
-
-        if (perfilExistente) {
-            return res.status(400).json({ mensagem: "Este usuário já possui um perfil de desenvolvedor ativo." });
-        }
-
-        const [novoDev] = await db.insert(desenvolvedor).values({
-            idUsuario: Number(idUsuario),
-            precoPorHora: precoPorHora ? Number(precoPorHora) : null,
-            sobreMim,
-            habilidades,
-            certificacoes,
-            experiencia
-        }).returning();
-        
-        return res.status(201).json(novoDev);
-        
-    } catch (error) {
-        console.error("🚨 ERRO AO CRIAR PERFIL DE DESENVOLVEDOR:", error); 
-        return res.status(500).json({ mensagem: "Erro ao criar perfil de desenvolvedor." });
-    }
+    return res.status(201).json(novo);
+  } catch (error) {
+    return res.status(500).json({ mensagem: 'Erro ao criar perfil.', error });
+  }
 };
 
 export const atualizarPerfilDev = async (req: Request, res: Response) => {
-    const { id } = req.params; // ID do desenvolvedor (idDev)
-    
-    const { 
-        precoPorHora, 
-        sobreMim, 
-        habilidades, 
-        certificacoes, 
-        experiencia 
-    } = req.body;  
+  const { id } = req.params;
+  const { precoPorHora, sobreMim, habilidades, certificacoes, experiencia } = req.body;
 
-    try {
-        const perfilAtualizado = await db.update(desenvolvedor)
-            .set({ 
-                precoPorHora: precoPorHora ? Number(precoPorHora) : undefined,
-                sobreMim,
-                habilidades,
-                certificacoes,
-                experiencia
-            })
-            .where(eq(desenvolvedor.idDev, Number(id)))
-            .returning();
+  try {
+    const [atualizado] = await db
+      .update(desenvolvedor)
+      .set({ precoPorHora: precoPorHora ? Number(precoPorHora) : undefined, sobreMim, habilidades, certificacoes, experiencia })
+      .where(eq(desenvolvedor.idDev, Number(id)))
+      .returning();
 
-        if (perfilAtualizado.length === 0) {
-            return res.status(404).json({ mensagem: "Perfil de desenvolvedor não encontrado." });
-        }
-            
-        res.status(200).json(perfilAtualizado);
-
-    } catch (error) {
-        console.error("🚨 ERRO AO ATUALIZAR PERFIL DE DESENVOLVEDOR:", error);
-        res.status(500).json({ mensagem: "Erro ao atualizar perfil." });
-    }
+    if (!atualizado) return res.status(404).json({ mensagem: 'Perfil não encontrado.' });
+    return res.status(200).json(atualizado);
+  } catch (error) {
+    return res.status(500).json({ mensagem: 'Erro ao atualizar perfil.', error });
+  }
 };
 
 export const deletarPerfilDev = async (req: Request, res: Response) => {
-    const { id } = req.params; // ID do desenvolvedor (idDev)
-    
-    try {
-        const perfilDeletado = await db.delete(desenvolvedor)
-            .where(eq(desenvolvedor.idDev, Number(id)))
-            .returning();
-            
-        res.status(200).json(perfilDeletado);
-
-    } catch (error) {
-        console.error("🚨 ERRO AO DELETAR PERFIL DE DESENVOLVEDOR:", error);
-        res.status(500).json({ mensagem: "Erro ao deletar perfil." });
-    }
-};
-
-export const buscarCandidaturasDoDev = async (req: Request, res: Response) => {
-    const { idDev } = req.params;
-
-    try {
-        const candidaturas = await db
-            .select({
-                aplicacao: aplicacao,
-                projeto: novoProjeto,
-            })
-            .from(aplicacao)
-            .innerJoin(novoProjeto, eq(aplicacao.idProjeto, novoProjeto.idProjeto))
-            .where(eq(aplicacao.idDev, Number(idDev)));
-
-        res.status(200).json(candidaturas);
-
-    } catch (error) {
-        console.error("🚨 ERRO AO BUSCAR CANDIDATURAS DO DEV:", error);
-        res.status(500).json({ mensagem: "Erro ao buscar candidaturas." });
-    }
+  const { id } = req.params;
+  try {
+    const [deletado] = await db.delete(desenvolvedor).where(eq(desenvolvedor.idDev, Number(id))).returning();
+    return res.status(200).json(deletado);
+  } catch (error) {
+    return res.status(500).json({ mensagem: 'Erro ao deletar perfil.', error });
+  }
 };

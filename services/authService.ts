@@ -1,22 +1,21 @@
+import { api } from './api';
+
 export type User = {
-  idUsuario: number;
-    nome: string;
-    email: string;
-    senha: string;
-    type: "client" | "developer";
-    cidade?: string;
-    estado?: string;
-    cpfCnpj?: string;
+  id: string;
+  email: string;
+  name: string;
+  type: 'client' | 'developer';
+  idDev?: number | null;
+  idCliente?: number | null;
 };
 
 export type RegisterData = {
-    nome: string;
-    email: string;
-    senha: string;
-    type: "client" | "developer";
-    cidade?: string;
-    estado?: string;
-    cpfCnpj?: string;
+  name: string;
+  email: string;
+  password: string;
+  type: 'client' | 'developer';
+  city: string;
+  state: string;
 };
 
 export type Candidatura = {
@@ -30,6 +29,7 @@ export type Candidatura = {
 
 export type ProjetoEmpresa = {
   id: string;
+  empresaId: string;
   titulo: string;
   descricao: string;
   orcamento: number;
@@ -48,11 +48,12 @@ export type NovoProjeto = {
   prazo: string;
   modalidades: string[];
   stack: string;
+  empresaId: string;
 };
 
 export type Desenvolvedor = {
   id: string;
-  userId: string; 
+  userId: string;
   nome: string;
   precoPorHora: number;
   descricao: string;
@@ -63,7 +64,7 @@ export type Desenvolvedor = {
 };
 
 export type MinhaCandidatura = {
-  candidaturaId: string; 
+  candidaturaId: string;
   projetoId: string;
   titulo: string;
   stack: string;
@@ -73,138 +74,159 @@ export type MinhaCandidatura = {
   dataEnvio: Date;
 };
 
+type LoginResponse = { token: string; user: { idUsuario: number; nome: string; email: string; type: string } };
 
-const API_URL = 'https://photography-enhancements-reserved-gregory.trycloudflare.com';
-
-async function handleResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    const text = await response.text().catch(() => '');
-    console.log('API error status:', response.status, 'body:', text);
-    let errorData: any = {};
-    try { errorData = JSON.parse(text); } catch {}
-    throw new Error(errorData.mensagem || errorData.message || `Erro ${response.status}`);
-  }
-  return response.json();
+function mapUser(raw: LoginResponse['user'], payload: { idDev?: number | null; idCliente?: number | null }): User {
+  return {
+    id: String(raw.idUsuario),
+    email: raw.email,
+    name: raw.nome,
+    type: raw.type as 'client' | 'developer',
+    idDev: payload.idDev ?? null,
+    idCliente: payload.idCliente ?? null,
+  };
 }
 
+function parseJwtPayload(token: string): { idDev?: number | null; idCliente?: number | null } {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1] ?? ''));
+    return { idDev: payload.idDev ?? null, idCliente: payload.idCliente ?? null };
+  } catch {
+    return {};
+  }
+}
 
 export const authService = {
-  
-  // ─── Autenticação ───
+  async login(email: string, password: string): Promise<{ token: string; user: User }> {
+    const res = await api.post<LoginResponse>('/login', { email, senha: password });
+    return { token: res.token, user: mapUser(res.user, parseJwtPayload(res.token)) };
+  },
 
-  async login(email: string, senha: string): Promise<User> {
-    const response = await fetch(`${API_URL}/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, senha }),
+  async register(data: RegisterData): Promise<{ token: string; user: User }> {
+    const res = await api.post<LoginResponse>('/usuarios', {
+      nome: data.name,
+      email: data.email,
+      senha: data.password,
+      type: data.type,
+      cidade: data.city,
+      estado: data.state,
     });
-    return handleResponse<User>(response);
+    return { token: res.token, user: mapUser(res.user, parseJwtPayload(res.token)) };
   },
 
-  async loginWithGoogle(token: string): Promise<User> {
-    const response = await fetch(`${API_URL}/login/google`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token }),
-    });
-    return handleResponse<User>(response);
+  async forgotPassword(_email: string): Promise<void> {
+    await new Promise((r) => setTimeout(r, 800));
   },
 
-  async register(data: RegisterData): Promise<User> {
-    const response = await fetch(`${API_URL}/usuarios`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    return handleResponse<User>(response);
+  async verifyCode(_email: string, code: string): Promise<void> {
+    await new Promise((r) => setTimeout(r, 600));
+    if (code !== '1234') throw new Error('Código inválido ou expirado. Tente novamente.');
   },
 
-  async forgotPassword(email: string): Promise<void> {
-    const response = await fetch(`${API_URL}/password/forgot`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-    });
-    return handleResponse<void>(response);
+  async resetPassword(_email: string, _code: string, _newPassword: string): Promise<void> {
+    await new Promise((r) => setTimeout(r, 800));
   },
 
-  async verifyCode(email: string, code: string): Promise<void> {
-    const response = await fetch(`${API_URL}/password/verify`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, code }),
-    });
-    return handleResponse<void>(response);
-  },
-
-  async resetPassword(email: string, code: string, newPassword: string): Promise<void> {
-    const response = await fetch(`${API_URL}/password/reset`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, code, newPassword }),
-    });
-    return handleResponse<void>(response);
-  },
-
-
-  async jaCandidatou(projetoId: string, idUsuario: number): Promise<boolean> {
-    const response = await fetch(`${API_URL}/candidaturas/check/${projetoId}?idUsuario=${idUsuario}`);
-    const data = await handleResponse<{ jaCandidatou: boolean }>(response);
-    return data.jaCandidatou;
-  },
-
-  async candidatar(data: Omit<MinhaCandidatura, 'status' | 'dataEnvio' | 'candidaturaId'> & { idUsuario: number }): Promise<void> {
-    const response = await fetch(`${API_URL}/candidaturas`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idUsuario: data.idUsuario, idProjeto: data.projetoId, proposta: data.preco }),
-    });
-    return handleResponse<void>(response);
-  },
-
-  async getMinhaCandidaturas(idUsuario: number): Promise<MinhaCandidatura[]> {
-    const response = await fetch(`${API_URL}/candidaturas/minhas?idUsuario=${idUsuario}`);
-    return handleResponse<MinhaCandidatura[]>(response);
-  },
-
-  // ─── Empresa ───
-
-  async getProjetosEmpresa(): Promise<ProjetoEmpresa[]> {
-    const response = await fetch(`${API_URL}/projetos`);
-    return handleResponse<ProjetoEmpresa[]>(response);
+  async getProjetosEmpresa(_empresaId: string): Promise<ProjetoEmpresa[]> {
+    const data = await api.get<any[]>('/projetos/meus');
+    return data.map((p) => ({
+      id: String(p.idProjeto),
+      empresaId: String(p.idCliente),
+      titulo: p.titulo,
+      descricao: p.descricao,
+      orcamento: p.orcamento,
+      prazo: `${p.prazo} dias`,
+      modalidades: [p.modalidade ?? 'H'],
+      stack: p.stack,
+      status: p.status ?? 'ativo',
+      candidaturas: (p.candidaturas ?? []).map((c: any) => ({
+        id: String(c.idAplicacao),
+        desenvolvedorId: String(c.idDev),
+        experiencia: c.desenvolvedor?.experiencia ?? '',
+        proposta: c.proposta ?? 0,
+        prazo: `${p.prazo} dias`,
+        status: c.status,
+      })),
+      dataCriacao: new Date(p.dataCriacao ?? Date.now()),
+    }));
   },
 
   async criarProjeto(data: NovoProjeto): Promise<ProjetoEmpresa> {
-    const response = await fetch(`${API_URL}/projetos`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+    const res = await api.post<any>('/projetos', {
+      titulo: data.titulo,
+      descricao: data.descricao,
+      orcamento: data.orcamento,
+      prazo: parseInt(data.prazo) || 30,
+      modalidades: data.modalidades,
+      stack: data.stack,
     });
-    return handleResponse<ProjetoEmpresa>(response);
+    return {
+      id: String(res.idProjeto),
+      empresaId: String(res.idCliente),
+      titulo: res.titulo,
+      descricao: res.descricao,
+      orcamento: res.orcamento,
+      prazo: `${res.prazo} dias`,
+      modalidades: data.modalidades,
+      stack: res.stack,
+      status: res.status ?? 'ativo',
+      candidaturas: [],
+      dataCriacao: new Date(),
+    };
   },
 
-  async atualizarStatusCandidatura(
-    projetoId: string,
-    candidaturaId: string,
-    status: 'aceito' | 'recusado'
-  ): Promise<void> {
-    const response = await fetch(`${API_URL}/projetos/${projetoId}/candidaturas/${candidaturaId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
-    });
-    return handleResponse<void>(response);
+  async atualizarStatusCandidatura(projetoId: string, candidaturaId: string, status: 'aceito' | 'recusado'): Promise<void> {
+    await api.patch(`/projetos/${projetoId}/candidaturas/${candidaturaId}`, { status });
   },
-
 
   async getDesenvolvedores(): Promise<Desenvolvedor[]> {
-    const response = await fetch(`${API_URL}/desenvolvedores`);
-    return handleResponse<Desenvolvedor[]>(response);
+    const data = await api.get<any[]>('/desenvolvedores');
+    return data.map((d) => ({
+      id: String(d.idDev),
+      userId: String(d.idUsuario),
+      nome: d.nome,
+      precoPorHora: d.precoPorHora ?? 0,
+      descricao: d.experiencia ?? '',
+      sobreMim: d.sobreMim ?? '',
+      habilidades: d.habilidades ?? '',
+      certificacoes: d.certificacoes ?? '',
+      projetos: [],
+    }));
   },
 
-  async getDesenvolvedorById(id: string): Promise<Desenvolvedor> {
-    const response = await fetch(`${API_URL}/desenvolvedores/${id}`);
-    return handleResponse<Desenvolvedor>(response);
+  getDesenvolvedorById(_id: string): Desenvolvedor | undefined {
+    return undefined;
+  },
+
+  jaCandidatou(_projetoId: string): boolean {
+    return false;
+  },
+
+  async jaCandidatouAsync(projetoId: string): Promise<boolean> {
+    try {
+      const res = await api.get<{ jaCandidatou: boolean }>(`/candidaturas/check/${projetoId}`);
+      return res.jaCandidatou === true;
+    } catch {
+      return false;
+    }
+  },
+
+  async candidatar(data: Omit<MinhaCandidatura, 'status' | 'dataEnvio' | 'candidaturaId'>): Promise<void> {
+    await api.post('/candidaturas', { idProjeto: data.projetoId, proposta: data.preco });
+  },
+
+  async getMinhaCandidaturas(): Promise<MinhaCandidatura[]> {
+    const data = await api.get<any[]>('/candidaturas/minhas');
+    return data.map((c) => ({
+      candidaturaId: String(c.candidaturaId),
+      projetoId: String(c.projetoId),
+      titulo: c.titulo,
+      stack: c.stack,
+      preco: c.preco ?? 0,
+      prazo: c.prazo,
+      status: c.status,
+      dataEnvio: new Date(c.dataEnvio ?? Date.now()),
+    }));
   },
 
   async getStoredUser(): Promise<User | null> {

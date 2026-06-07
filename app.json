@@ -45,7 +45,13 @@
         }
       ],
       "expo-web-browser",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "O RedeemSoft precisa acessar suas fotos para você definir sua foto de perfil."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
