@@ -37,6 +37,10 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    if (user.type !== 'developer') {
+      return;
+    }
+
     let cancelled = false;
     setIsLoading(true);
 
@@ -76,7 +80,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfile = useCallback(
     async (data: Partial<DevProfile>) => {
-      if (!user) return;
+      if (!user || user.type !== 'developer') return;
       setProfile((prev) => ({ ...prev, ...data }));
 
       const saves: Promise<unknown>[] = [profileService.update(data)];
