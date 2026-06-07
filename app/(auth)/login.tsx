@@ -195,7 +195,7 @@ async function handleLogin() {
 
           <Pressable
             style={styles.forgotLink}
-            onPress={() => router.push('/(auth)/forgot-senha' as Href)}
+            onPress={() => router.push('/(auth)/forgot-password' as Href)}
           >
             <Text style={styles.linkText}>Esqueci minha senha</Text>
           </Pressable>
