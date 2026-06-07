@@ -16,6 +16,7 @@ export default function AppLayout() {
       <Stack.Screen name="chat-conversa" />
       <Stack.Screen name="editar-habilidades" />
       <Stack.Screen name="editar-certificados" />
+      <Stack.Screen name="editar-perfil" />
     </Stack>
   );
 }

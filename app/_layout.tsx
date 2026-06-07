@@ -26,8 +26,11 @@ function RootLayoutNav() {
     if (!navigatorReady || isLoading) return;
 
     const inAuthGroup = (segments[0] as string) === '(auth)';
+    // Telas de recuperação de senha são acessíveis mesmo estando autenticado
+    const recoveryScreens = ['forgot-password', 'verify-code', 'reset-password'];
+    const isRecoveryScreen = recoveryScreens.includes(segments[1] as string ?? '');
 
-    if (isAuthenticated && inAuthGroup) {
+    if (isAuthenticated && inAuthGroup && !isRecoveryScreen) {
       router.replace('/(app)' as Href);
     } else if (!isAuthenticated && !inAuthGroup) {
       router.replace('/(auth)/login' as Href);

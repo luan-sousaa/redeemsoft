@@ -21,7 +21,7 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function ResetPasswordScreen() {
   const router = useRouter();
   const { email, code } = useLocalSearchParams<{ email: string; code: string }>();
-  const { resetPassword } = useAuth();
+  const { resetPassword, isAuthenticated } = useAuth();
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -62,7 +62,8 @@ export default function ResetPasswordScreen() {
         text1: 'Senha alterada!',
         text2: 'Sua senha foi redefinida com sucesso.',
       });
-      router.replace('/(auth)/login' as Href);
+      // Usuário autenticado (veio das configurações) volta pro app; senão vai pro login
+      router.replace((isAuthenticated ? '/(app)' : '/(auth)/login') as Href);
     } catch (e: unknown) {
       Toast.show({
         type: 'error',
