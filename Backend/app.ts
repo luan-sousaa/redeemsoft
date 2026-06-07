@@ -13,7 +13,7 @@ const PORT = Number(process.env['PORT']) || 3000;
 app.use(cors());
 app.use(express.json());
 
-app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+app.get('/health', (_req, res) => res.json({ status: 'ok', version: '2.0.0', routes: ['forgot-password', 'verify-code', 'reset-password'] }));
 
 app.use('/', usuarioRoutes);
 app.use('/', projetoRoutes);
