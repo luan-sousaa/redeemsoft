@@ -3,6 +3,33 @@ import { db } from '../db/db';
 import { desenvolvedor, usuario } from '../db/schema';
 import { eq } from 'drizzle-orm';
 
+export const buscarDesenvolvedorPorId = async (req: Request, res: Response) => {
+  const id = Number(req.params['id']);
+  if (isNaN(id)) return res.status(400).json({ mensagem: 'ID inválido.' });
+
+  try {
+    const [dev] = await db
+      .select({
+        idDev: desenvolvedor.idDev,
+        idUsuario: desenvolvedor.idUsuario,
+        nome: usuario.nome,
+        precoPorHora: desenvolvedor.precoPorHora,
+        sobreMim: desenvolvedor.sobreMim,
+        habilidades: desenvolvedor.habilidades,
+        certificacoes: desenvolvedor.certificacoes,
+        experiencia: desenvolvedor.experiencia,
+      })
+      .from(desenvolvedor)
+      .innerJoin(usuario, eq(desenvolvedor.idUsuario, usuario.idUsuario))
+      .where(eq(desenvolvedor.idDev, id));
+
+    if (!dev) return res.status(404).json({ mensagem: 'Desenvolvedor não encontrado.' });
+    return res.status(200).json(dev);
+  } catch (error) {
+    return res.status(500).json({ mensagem: 'Erro ao buscar desenvolvedor.', error });
+  }
+};
+
 export const encontrarDesenvolvedores = async (req: Request, res: Response) => {
   try {
     const devs = await db

@@ -1,29 +1,66 @@
-import React, { useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
+  Dimensions,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Toast from 'react-native-toast-message';
 
 import { Colors } from '@/constants/colors';
+import { authService } from '@/services/authService';
 
-// ─── Campo somente-leitura ────────────────────────────────────────────────────
+const { width } = Dimensions.get('window');
+const GRID_PADDING = 20;
+const GRID_GAP = 12;
 
-function InfoField({ label, value }: { label: string; value: string }) {
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function parseList(value: string | null | undefined): string[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) return parsed;
+  } catch {}
+  return value.split(',').map((s) => s.trim()).filter(Boolean);
+}
+
+// ─── Componentes auxiliares (mesmo estilo de sobre-mim.tsx) ───────────────────
+
+function SectionHeader({ title }: { title: string }) {
   return (
-    <View style={styles.fieldWrap}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <View style={styles.fieldBox}>
-        <Text style={styles.fieldValue}>{value}</Text>
-      </View>
+    <View style={styles.sectionHeaderRow}>
+      <Text style={styles.sectionTitle}>{title}</Text>
     </View>
   );
+}
+
+function SkillChip({ label }: { label: string }) {
+  return (
+    <View style={styles.chip}>
+      <Text style={styles.chipText}>{label}</Text>
+    </View>
+  );
+}
+
+function CertRow({ label }: { label: string }) {
+  return (
+    <View style={styles.certRow}>
+      <View style={styles.certIconWrap}>
+        <Ionicons name="ribbon-outline" size={18} color={Colors.primary} />
+      </View>
+      <Text style={styles.certText} numberOfLines={2}>{label}</Text>
+    </View>
+  );
+}
+
+function EmptyHint({ text }: { text: string }) {
+  return <Text style={styles.emptyHint}>{text}</Text>;
 }
 
 // ─── Tela ─────────────────────────────────────────────────────────────────────
@@ -32,230 +69,295 @@ export default function DesenvolvedorDetalheScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{
     id: string;
-    nome: string;
-    precoPorHora: string;
-    descricao: string;
-    sobreMim: string;
-    habilidades: string;
-    certificacoes: string;
-    projetos: string;
+    // params opcionais passados da tela de candidaturas — não usados na exibição
+    candidaturaId?: string;
+    projetoId?: string;
+    // params legados passados por buscar-desenvolvedores.tsx (ignorados ao buscar da API)
+    nome?: string;
+    precoPorHora?: string;
+    sobreMim?: string;
+    habilidades?: string;
+    certificacoes?: string;
+    projetos?: string;
   }>();
 
-  const [contratando, setContratando] = useState(false);
+  type DevData = {
+    nome: string;
+    precoPorHora: number | null;
+    sobreMim: string | null;
+    habilidades: string[];
+    certificacoes: string[];
+  };
 
-  const projetos: string[] = params.projetos ? JSON.parse(params.projetos) : [];
+  const [dev, setDev] = useState<DevData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [erro, setErro] = useState(false);
 
-  async function handleContratar() {
-    setContratando(true);
-    await new Promise((r) => setTimeout(r, 900));
-    setContratando(false);
-    Toast.show({
-      type: 'success',
-      text1: 'Solicitação enviada!',
-      text2: `${params.nome} receberá sua proposta em breve.`,
-    });
-    setTimeout(() => router.back(), 1500);
-  }
+  useEffect(() => {
+    async function carregar() {
+      try {
+        const data = await authService.getDevById(params.id);
+        setDev({
+          nome: data.nome,
+          precoPorHora: data.precoPorHora,
+          sobreMim: data.sobreMim,
+          habilidades: parseList(data.habilidades),
+          certificacoes: parseList(data.certificacoes),
+        });
+      } catch {
+        setErro(true);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    carregar();
+  }, [params.id]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-
-        {/* Header: voltar + nome + preço */}
-        <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="arrow-back-circle-outline" size={32} color={Colors.text} />
-          </Pressable>
-          <Text style={styles.nome} numberOfLines={2}>{params.nome}</Text>
-          <View style={styles.precoBadge}>
-            <Text style={styles.precoLabel}>Preço por hora:</Text>
-            <Text style={styles.precoValue}>R$ {params.precoPorHora},00</Text>
-          </View>
-        </View>
-
-        {/* Foto (placeholder) */}
-        <View style={styles.fotoContainer}>
-          <View style={styles.foto}>
-            <Ionicons name="person" size={48} color={Colors.textSecondary} />
-          </View>
-        </View>
-
-        {/* Campos */}
-        <View style={styles.fields}>
-          <InfoField label="Sobre mim:" value={params.sobreMim ?? ''} />
-          <InfoField label="Habilidades:" value={params.habilidades ?? ''} />
-          <InfoField label="Certificações:" value={params.certificacoes ?? ''} />
-        </View>
-
-        {/* Projetos */}
-        <View style={styles.fieldWrap}>
-          <Text style={styles.fieldLabel}>Projetos:</Text>
-          <View style={styles.projetosGrid}>
-            {projetos.map((p, i) => (
-              <View key={i} style={styles.projetoCard}>
-                <Ionicons name="briefcase-outline" size={20} color={Colors.primary} />
-                <Text style={styles.projetoText} numberOfLines={3}>{p}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Botão Chat */}
-        <View style={styles.chatRow}>
-          <Pressable style={styles.chatBtn} onPress={() => {}}>
-            <Ionicons name="chatbubble-outline" size={18} color={Colors.text} />
-            <Text style={styles.chatBtnText}>chat</Text>
-          </Pressable>
-        </View>
-
-        {/* Botão Contratar */}
-        <Pressable
-          style={[styles.contratarBtn, contratando && { opacity: 0.7 }]}
-          onPress={handleContratar}
-          disabled={contratando}
-        >
-          <Text style={styles.contratarText}>
-            {contratando ? 'Enviando...' : 'Contratar'}
-          </Text>
+      {/* Header */}
+      <View style={styles.header}>
+        <Pressable style={styles.backBtn} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color={Colors.text} />
         </Pressable>
+        <Text style={styles.headerTitle}>Perfil do Desenvolvedor</Text>
+        <View style={{ width: 40 }} />
+      </View>
 
-      </ScrollView>
-      <Toast />
+      {isLoading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      ) : erro ? (
+        <View style={styles.center}>
+          <Ionicons name="alert-circle-outline" size={48} color={Colors.error} />
+          <Text style={styles.erroText}>Erro ao carregar perfil. Tente novamente.</Text>
+          <Pressable style={styles.retryBtn} onPress={() => { setErro(false); setIsLoading(true); }}>
+            <Text style={styles.retryText}>Tentar novamente</Text>
+          </Pressable>
+        </View>
+      ) : dev ? (
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+
+          {/* Hero */}
+          <View style={styles.heroSection}>
+            <View style={styles.avatarWrap}>
+              <View style={styles.avatarPlaceholder}>
+                <Ionicons name="person" size={48} color={Colors.textSecondary} />
+              </View>
+            </View>
+            <Text style={styles.nome}>{dev.nome}</Text>
+            <View style={styles.typeBadge}>
+              <Ionicons name="code-slash-outline" size={12} color={Colors.primary} />
+              <Text style={styles.typeBadgeText}>Desenvolvedor</Text>
+            </View>
+            {dev.precoPorHora != null && (
+              <View style={styles.precoBadge}>
+                <Text style={styles.precoText}>
+                  {dev.precoPorHora.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}/h
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Sobre Mim */}
+          <View style={styles.section}>
+            <SectionHeader title="Sobre Mim" />
+            <View style={styles.textCard}>
+              {dev.sobreMim ? (
+                <Text style={styles.bioText}>{dev.sobreMim}</Text>
+              ) : (
+                <EmptyHint text="Nenhuma descrição cadastrada." />
+              )}
+            </View>
+          </View>
+
+          {/* Habilidades */}
+          <View style={styles.section}>
+            <SectionHeader title="Habilidades" />
+            {dev.habilidades.length > 0 ? (
+              <View style={styles.chipsWrap}>
+                {dev.habilidades.map((h) => (
+                  <SkillChip key={h} label={h} />
+                ))}
+              </View>
+            ) : (
+              <EmptyHint text="Nenhuma habilidade cadastrada." />
+            )}
+          </View>
+
+          {/* Certificações */}
+          <View style={styles.section}>
+            <SectionHeader title="Certificações" />
+            {dev.certificacoes.length > 0 ? (
+              <View style={styles.certList}>
+                {dev.certificacoes.map((c) => (
+                  <CertRow key={c} label={c} />
+                ))}
+              </View>
+            ) : (
+              <EmptyHint text="Nenhuma certificação cadastrada." />
+            )}
+          </View>
+
+        </ScrollView>
+      ) : null}
     </SafeAreaView>
   );
 }
 
-// ─── Estilos ──────────────────────────────────────────────────────────────────
+// ─── Estilos (espelham sobre-mim.tsx) ─────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  scroll: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-  },
+  safe: { flex: 1, backgroundColor: Colors.background },
+
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '800',
+    color: Colors.text,
+    textAlign: 'center',
+  },
+
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24 },
+  erroText: { fontSize: 15, color: Colors.textSecondary, textAlign: 'center' },
+  retryBtn: {
+    backgroundColor: Colors.primary,
+    borderRadius: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+  },
+  retryText: { color: Colors.text, fontWeight: '700', fontSize: 14 },
+
+  scroll: { paddingBottom: 48 },
+
+  heroSection: {
+    alignItems: 'center',
+    paddingVertical: 28,
+    paddingHorizontal: GRID_PADDING,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
     gap: 10,
   },
-  backBtn: {
-    padding: 2,
-  },
-  nome: {
-    flex: 1,
-    fontSize: 20,
-    fontWeight: '700',
-    color: Colors.text,
-  },
-  precoBadge: {
-    backgroundColor: Colors.surface,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    alignItems: 'center',
-  },
-  precoLabel: {
-    color: Colors.textSecondary,
-    fontSize: 10,
-  },
-  precoValue: {
-    color: Colors.text,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  fotoContainer: {
-    alignItems: 'flex-start',
-    marginBottom: 20,
-  },
-  foto: {
-    width: 90,
-    height: 90,
-    borderRadius: 12,
+  avatarWrap: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    overflow: 'hidden',
     backgroundColor: Colors.surfaceHighlight,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    marginBottom: 4,
+  },
+  avatarPlaceholder: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
-  fields: {
-    gap: 14,
-    marginBottom: 14,
-  },
-  fieldWrap: {
-    marginBottom: 14,
-  },
-  fieldLabel: {
-    color: Colors.textSecondary,
-    fontSize: 13,
-    marginBottom: 6,
-    fontWeight: '500',
-  },
-  fieldBox: {
-    backgroundColor: Colors.surface,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: 12,
-  },
-  fieldValue: {
+  nome: {
+    fontSize: 22,
+    fontWeight: '800',
     color: Colors.text,
-    fontSize: 14,
-    lineHeight: 20,
+    textAlign: 'center',
   },
-  projetosGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  projetoCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: 12,
-    width: '47%',
-    gap: 8,
-  },
-  projetoText: {
-    color: Colors.textSecondary,
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  chatRow: {
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  chatBtn: {
+  typeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     backgroundColor: Colors.surface,
-    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  typeBadgeText: { fontSize: 12, color: Colors.primary, fontWeight: '600' },
+  precoBadge: {
+    backgroundColor: Colors.surfaceHighlight,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: Colors.border,
-    paddingHorizontal: 28,
-    paddingVertical: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
   },
-  chatBtnText: {
-    color: Colors.text,
-    fontSize: 14,
-    fontWeight: '500',
+  precoText: { fontSize: 13, color: Colors.text, fontWeight: '700' },
+
+  section: {
+    paddingHorizontal: GRID_PADDING,
+    paddingTop: 24,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
   },
-  contratarBtn: {
-    backgroundColor: Colors.primary,
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  contratarText: {
-    color: Colors.text,
-    fontSize: 16,
+  sectionHeaderRow: { marginBottom: 14 },
+  sectionTitle: {
+    fontSize: 13,
     fontWeight: '700',
+    color: Colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+
+  textCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: 16,
+  },
+  bioText: { fontSize: 15, color: Colors.text, lineHeight: 24 },
+
+  chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: {
+    backgroundColor: Colors.surfaceHighlight,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  chipText: { fontSize: 13, color: Colors.primary, fontWeight: '600' },
+
+  certList: { gap: 10 },
+  certRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 12,
+  },
+  certIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(79,110,247,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  certText: {
+    flex: 1,
+    fontSize: 14,
+    color: Colors.text,
+    fontWeight: '500',
+    lineHeight: 20,
+  },
+
+  emptyHint: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    fontStyle: 'italic',
+    paddingVertical: 4,
   },
 });

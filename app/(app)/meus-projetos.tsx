@@ -114,22 +114,34 @@ function CandidatosModal({
               const dev = devMap[cand.desenvolvedorId];
               return (
                 <View key={cand.id} style={modal.card}>
-                  {/* Cabeçalho do candidato */}
-                  <View style={modal.cardHeader}>
-                    <View style={modal.avatar}>
-                      <Text style={modal.avatarLetter}>{dev?.nome.charAt(0) ?? '?'}</Text>
+                  {/* Toque abre o perfil completo do desenvolvedor */}
+                  <Pressable
+                    style={modal.cardTappable}
+                    onPress={() => router.push({
+                      pathname: '/(app)/desenvolvedor-detalhe',
+                      params: {
+                        id: cand.desenvolvedorId,
+                        candidaturaId: cand.id,
+                        projetoId: projeto.id,
+                      },
+                    })}
+                  >
+                    <View style={modal.cardHeader}>
+                      <View style={modal.avatar}>
+                        <Text style={modal.avatarLetter}>{dev?.nome.charAt(0) ?? '?'}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={modal.candName}>{dev?.nome ?? cand.nomeDesenvolvedor || 'Desconhecido'}</Text>
+                        <Text style={modal.candEmail}>{dev?.descricao ?? ''}</Text>
+                      </View>
+                      <View style={[modal.statusBadge, { backgroundColor: cfg.bg }]}>
+                        <Text style={[modal.statusText, { color: cfg.color }]}>{cfg.label}</Text>
+                      </View>
+                      <Ionicons name="chevron-forward-outline" size={16} color={Colors.textSecondary} />
                     </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={modal.candName}>{dev?.nome ?? 'Desconhecido'}</Text>
-                      <Text style={modal.candEmail}>{dev?.descricao ?? ''}</Text>
-                    </View>
-                    <View style={[modal.statusBadge, { backgroundColor: cfg.bg }]}>
-                      <Text style={[modal.statusText, { color: cfg.color }]}>{cfg.label}</Text>
-                    </View>
-                  </View>
 
-                  {/* Detalhes */}
-                  <Text style={modal.experiencia}>{cand.experiencia}</Text>
+                    {/* Detalhes */}
+                    <Text style={modal.experiencia}>{cand.experiencia}</Text>
 
                   <View style={modal.detailsRow}>
                     <View style={modal.detail}>
@@ -143,8 +155,9 @@ function CandidatosModal({
                       <Text style={modal.detailText}>{cand.prazo}</Text>
                     </View>
                   </View>
+                  </Pressable>
 
-                  {/* Ações */}
+                  {/* Ações fora do Pressable para não acionar navegação */}
                   {cand.status === 'pendente' && (
                     <View style={modal.actions}>
                       {isLoading ? (
@@ -465,6 +478,7 @@ const modal = StyleSheet.create({
     borderColor: Colors.border,
     gap: 10,
   },
+  cardTappable: { gap: 10 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: {
     width: 44,

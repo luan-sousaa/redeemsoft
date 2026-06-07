@@ -204,6 +204,18 @@ export const authService = {
     return undefined;
   },
 
+  async getDevById(id: string | number): Promise<{
+    idDev: number;
+    nome: string;
+    precoPorHora: number | null;
+    sobreMim: string | null;
+    habilidades: string | null;
+    certificacoes: string | null;
+    experiencia: string | null;
+  }> {
+    return api.get(`/desenvolvedores/${id}`);
+  },
+
   jaCandidatou(_projetoId: string): boolean {
     return false;
   },
