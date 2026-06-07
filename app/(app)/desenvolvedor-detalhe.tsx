@@ -67,19 +67,10 @@ function EmptyHint({ text }: { text: string }) {
 
 export default function DesenvolvedorDetalheScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{
-    id: string;
-    // params opcionais passados da tela de candidaturas — não usados na exibição
-    candidaturaId?: string;
-    projetoId?: string;
-    // params legados passados por buscar-desenvolvedores.tsx (ignorados ao buscar da API)
-    nome?: string;
-    precoPorHora?: string;
-    sobreMim?: string;
-    habilidades?: string;
-    certificacoes?: string;
-    projetos?: string;
-  }>();
+  // Expo Router pode retornar string | string[] — normaliza para string primitiva
+  // para evitar referência nova de array a cada render (causaria loop infinito no effect)
+  const { id: rawId } = useLocalSearchParams();
+  const devId = Array.isArray(rawId) ? rawId[0] : rawId;
 
   type DevData = {
     nome: string;
@@ -94,24 +85,32 @@ export default function DesenvolvedorDetalheScreen() {
   const [erro, setErro] = useState(false);
 
   useEffect(() => {
+    if (!devId) return;
+    let cancelled = false; // evita setState após desmontagem
+
     async function carregar() {
       try {
-        const data = await authService.getDevById(params.id);
-        setDev({
-          nome: data.nome,
-          precoPorHora: data.precoPorHora,
-          sobreMim: data.sobreMim,
-          habilidades: parseList(data.habilidades),
-          certificacoes: parseList(data.certificacoes),
-        });
+        setIsLoading(true);
+        const data = await authService.getDevById(devId);
+        if (!cancelled) {
+          setDev({
+            nome: data.nome,
+            precoPorHora: data.precoPorHora,
+            sobreMim: data.sobreMim,
+            habilidades: parseList(data.habilidades),
+            certificacoes: parseList(data.certificacoes),
+          });
+        }
       } catch {
-        setErro(true);
+        if (!cancelled) setErro(true);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     }
+
     carregar();
-  }, [params.id]);
+    return () => { cancelled = true; };
+  }, [devId]); // só re-executa se o ID mudar
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>

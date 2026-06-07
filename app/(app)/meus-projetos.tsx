@@ -10,6 +10,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -114,15 +115,16 @@ function CandidatosModal({
               const dev = devMap[cand.desenvolvedorId];
               return (
                 <View key={cand.id} style={modal.card}>
-                  {/* Toque abre o perfil completo do desenvolvedor */}
-                  <Pressable
+                  {/* TouchableOpacity é mais confiável que Pressable dentro de ScrollView+Modal no iOS */}
+                  <TouchableOpacity
+                    activeOpacity={0.7}
                     style={modal.cardTappable}
                     onPress={() => router.push({
                       pathname: '/(app)/desenvolvedor-detalhe',
                       params: {
-                        id: cand.desenvolvedorId,
-                        candidaturaId: cand.id,
-                        projetoId: projeto.id,
+                        id: String(cand.desenvolvedorId),
+                        candidaturaId: String(cand.id),
+                        projetoId: String(projeto.id),
                       },
                     })}
                   >
@@ -155,9 +157,9 @@ function CandidatosModal({
                       <Text style={modal.detailText}>{cand.prazo}</Text>
                     </View>
                   </View>
-                  </Pressable>
+                  </TouchableOpacity>
 
-                  {/* Ações fora do Pressable para não acionar navegação */}
+                  {/* Ações fora do TouchableOpacity para não acionar navegação */}
                   {cand.status === 'pendente' && (
                     <View style={modal.actions}>
                       {isLoading ? (
