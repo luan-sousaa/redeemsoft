@@ -15,6 +15,11 @@ import { authMiddleware } from '../middleware/auth.js';
 
 const router = express.Router();
 
+// Retorna dados do usuário autenticado (usado para restaurar sessão no frontend)
+router.get('/me', authMiddleware, (req, res) => {
+  res.json(req.user);
+});
+
 router.post('/login', fazerLogin);
 router.post('/usuarios', criarUsuario);
 router.get('/usuarios', authMiddleware, encontrarUsuario);

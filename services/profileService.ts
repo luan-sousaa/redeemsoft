@@ -1,4 +1,5 @@
 import { api } from './api';
+import { parseList } from '@/utils/parseList';
 
 export type DevProfile = {
   sobreMim: string;
@@ -10,15 +11,6 @@ export type DevProfile = {
 
 // Cache local para refletir edições antes de novo fetch
 let cache: DevProfile | null = null;
-
-function parseList(value: string | null | undefined): string[] {
-  if (!value) return [];
-  try {
-    const parsed = JSON.parse(value);
-    if (Array.isArray(parsed)) return parsed;
-  } catch {}
-  return value.split(',').map((s) => s.trim()).filter(Boolean);
-}
 
 function serializeList(list: string[]): string {
   return JSON.stringify(list);
@@ -37,7 +29,8 @@ export const profileService = {
         fotoUri: null,
         projetoFotos: [null, null, null, null],
       };
-    } catch {
+    } catch (err) {
+      console.warn('[profileService] Falha ao buscar perfil da API:', err);
       cache = { sobreMim: '', habilidades: [], certificados: [], fotoUri: null, projetoFotos: [null, null, null, null] };
     }
 

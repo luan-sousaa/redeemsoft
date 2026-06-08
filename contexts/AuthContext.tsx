@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useReducer } from 'react';
+import React, { createContext, useContext, useEffect, useReducer } from 'react';
 import { authService, type RegisterData, type User } from '@/services/authService';
-import { tokenStorage } from '@/services/api';
+import { api, tokenStorage } from '@/services/api';
 import { profileService } from '@/services/profileService';
 
 type AuthState = {
@@ -43,9 +43,35 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(authReducer, {
     user: null,
-    isLoading: false,
+    isLoading: true, // começa carregando enquanto tenta restaurar sessão
     isAuthenticated: false,
   });
+
+  // Restaura sessão do AsyncStorage ao iniciar o app
+  useEffect(() => {
+    tokenStorage.loadFromStorage().then(async (storedToken) => {
+      if (!storedToken) {
+        dispatch({ type: 'SET_LOADING', payload: false });
+        return;
+      }
+      try {
+        // Valida o token buscando o usuário via API
+        const userData = await api.get<{ idUsuario: number; nome: string; email: string; type: string; idDev: number | null; idCliente: number | null }>('/me');
+        dispatch({ type: 'SET_USER', payload: {
+          id: String(userData.idUsuario),
+          email: userData.email,
+          name: userData.nome,
+          type: userData.type as 'client' | 'developer',
+          idDev: userData.idDev,
+          idCliente: userData.idCliente,
+        }});
+      } catch {
+        // Token inválido/expirado — limpa e vai para login
+        tokenStorage.remove();
+        dispatch({ type: 'SET_LOADING', payload: false });
+      }
+    });
+  }, []);
 
   function setUser(token: string, user: User) {
     tokenStorage.save(token);

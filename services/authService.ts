@@ -200,10 +200,6 @@ export const authService = {
     }));
   },
 
-  getDesenvolvedorById(_id: string): Desenvolvedor | undefined {
-    return undefined;
-  },
-
   async getDevById(id: string | number): Promise<{
     idDev: number;
     nome: string;
@@ -215,10 +211,6 @@ export const authService = {
     projetos: { titulo: string; stack: string }[];
   }> {
     return api.get(`/desenvolvedores/${id}`);
-  },
-
-  jaCandidatou(_projetoId: string): boolean {
-    return false;
   },
 
   async jaCandidatouAsync(projetoId: string): Promise<boolean> {
@@ -235,7 +227,16 @@ export const authService = {
   },
 
   async getMinhaCandidaturas(): Promise<MinhaCandidatura[]> {
-    const data = await api.get<any[]>('/candidaturas/minhas');
+    type RawCandidatura = {
+      candidaturaId: number;
+      projetoId: number;
+      titulo: string;
+      stack: string;
+      preco: number | null;
+      prazo: string;
+      status: 'pendente' | 'aceito' | 'recusado';
+    };
+    const data = await api.get<RawCandidatura[]>('/candidaturas/minhas');
     return data.map((c) => ({
       candidaturaId: String(c.candidaturaId),
       projetoId: String(c.projetoId),
@@ -244,11 +245,7 @@ export const authService = {
       preco: c.preco ?? 0,
       prazo: c.prazo,
       status: c.status,
-      dataEnvio: new Date(c.dataEnvio ?? Date.now()),
+      dataEnvio: new Date(),
     }));
-  },
-
-  async getStoredUser(): Promise<User | null> {
-    return null;
   },
 };

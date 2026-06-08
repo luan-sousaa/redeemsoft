@@ -1,36 +1,65 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 export const API_BASE_URL = 'https://redeemsoft-backend-production.up.railway.app';
 
+const TOKEN_KEY = '@redeemsoft:token';
 let memoryToken: string | null = null;
 
 export const tokenStorage = {
-  save(token: string)        { memoryToken = token; },
-  get(): string | null       { return memoryToken; },
-  remove()                   { memoryToken = null; },
+  save(token: string) {
+    memoryToken = token;
+    AsyncStorage.setItem(TOKEN_KEY, token).catch(() => {});
+  },
+  get(): string | null {
+    return memoryToken;
+  },
+  remove() {
+    memoryToken = null;
+    AsyncStorage.removeItem(TOKEN_KEY).catch(() => {});
+  },
+  async loadFromStorage(): Promise<string | null> {
+    try {
+      const stored = await AsyncStorage.getItem(TOKEN_KEY);
+      if (stored) memoryToken = stored;
+      return stored;
+    } catch {
+      return null;
+    }
+  },
 };
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+
+const TIMEOUT_MS = 15_000;
 
 async function request<T>(method: HttpMethod, path: string, body?: unknown): Promise<T> {
   const url = `${API_BASE_URL}${path}`;
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (memoryToken) headers['Authorization'] = `Bearer ${memoryToken}`;
 
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
   try {
-    console.log(`[API] ${method} ${url}`);
     const response = await fetch(url, {
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
     });
+
     const text = await response.text();
-    console.log(`[API] ${response.status} →`, text.slice(0, 120));
     const data = text ? JSON.parse(text) : null;
+
     if (!response.ok) throw new Error(data?.mensagem ?? `Erro ${response.status}`);
     return data as T;
   } catch (err: unknown) {
-    const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
-    console.error(`[API] FALHOU ${method} ${url} →`, msg);
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('Tempo de resposta excedido. Verifique sua conexão.');
+    }
     throw err;
+  } finally {
+    clearTimeout(timer);
   }
 }
 

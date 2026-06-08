@@ -1,7 +1,11 @@
 import jwt from 'jsonwebtoken';
 import type { Request, Response, NextFunction } from 'express';
 
-export const JWT_SECRET = process.env.JWT_SECRET ?? 'redeemsoft-dev-secret-2024';
+const envSecret = process.env['JWT_SECRET'];
+if (!envSecret) {
+  console.warn('[SECURITY] JWT_SECRET não definido — usando segredo de desenvolvimento. NUNCA use em produção.');
+}
+export const JWT_SECRET = envSecret ?? 'redeemsoft-dev-secret-2024';
 
 export type JwtPayload = {
   idUsuario: number;

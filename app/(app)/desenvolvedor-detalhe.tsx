@@ -14,21 +14,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors } from '@/constants/colors';
 import { authService } from '@/services/authService';
+import { parseList } from '@/utils/parseList';
 
-const { width } = Dimensions.get('window');
 const GRID_PADDING = 20;
-const GRID_GAP = 12;
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function parseList(value: string | null | undefined): string[] {
-  if (!value) return [];
-  try {
-    const parsed = JSON.parse(value);
-    if (Array.isArray(parsed)) return parsed;
-  } catch {}
-  return value.split(',').map((s) => s.trim()).filter(Boolean);
-}
 
 // ─── Componentes auxiliares (mesmo estilo de sobre-mim.tsx) ───────────────────
 
