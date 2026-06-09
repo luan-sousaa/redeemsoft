@@ -19,6 +19,11 @@ export default function AppLayout() {
       <Stack.Screen name="editar-perfil" />
       <Stack.Screen name="configuracoes-empresa" />
       <Stack.Screen name="perfil-empresa" />
+      <Stack.Screen name="checkout" />
+      <Stack.Screen name="pagamento-pix" />
+      <Stack.Screen name="notificacoes" />
+      <Stack.Screen name="confirmar-contratacao" />
+      <Stack.Screen name="chat" />
     </Stack>
   );
 }

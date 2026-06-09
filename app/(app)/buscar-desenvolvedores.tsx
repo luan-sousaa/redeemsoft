@@ -54,23 +54,38 @@ function DevCard({
         {dev.descricao}
       </Text>
 
-      {/* Habilidades (primeiras 3) */}
-      {/* Habilidades (primeiras 3) */}
-    <View style={styles.chips}>
-      {dev.habilidades 
-        ? dev.habilidades
-            .split(',')
-            .slice(0, 3)
-            .map((h) => (
-              <View key={h.trim()} style={styles.chip}>
-                <Text style={styles.chipText}>{h.trim()}</Text>
-              </View>
-            ))
-        : <View style={styles.chip}>
-            <Text style={styles.chipText}>Não informado</Text>
-          </View>
-      }
-    </View>
+      {/* Habilidades — parse seguro de JSON array ou string separada por vírgula */}
+    {(() => {
+      const skills: string[] = (() => {
+        try {
+          const parsed = typeof dev.habilidades === 'string'
+            ? JSON.parse(dev.habilidades)
+            : dev.habilidades;
+          if (Array.isArray(parsed)) return parsed;
+        } catch {
+          // fallback: string separada por vírgula
+        }
+        return dev.habilidades
+          ? dev.habilidades.split(',').map((s) => s.trim()).filter(Boolean)
+          : [];
+      })();
+      return (
+        <View style={styles.chips}>
+          {skills.length > 0
+            ? skills.slice(0, 3).map((skill, i) => (
+                <View key={i} style={styles.chip}>
+                  <Text style={styles.chipText}>{skill}</Text>
+                </View>
+              ))
+            : (
+                <View style={styles.chip}>
+                  <Text style={styles.chipText}>Não informado</Text>
+                </View>
+              )
+          }
+        </View>
+      );
+    })()}
     </Pressable>
   );
 }

@@ -31,14 +31,18 @@ function useCountdown(expiresAt: string) {
 
 export default function PagamentoPixScreen() {
   const router = useRouter();
-  const { id, brCode, brCodeBase64, expiresAt, projetoId, candidaturaId } = useLocalSearchParams<{
-    id: string;
-    brCode: string;
-    brCodeBase64: string;
-    expiresAt: string;
-    projetoId?: string;
-    candidaturaId?: string;
-  }>();
+  const { id, brCode, brCodeBase64, expiresAt, contratoId, projetoId, candidaturaId, projetoNome, devNome } =
+    useLocalSearchParams<{
+      id: string;
+      brCode: string;
+      brCodeBase64: string;
+      expiresAt: string;
+      contratoId?: string;
+      projetoId?: string;
+      candidaturaId?: string;
+      projetoNome?: string;
+      devNome?: string;
+    }>();
 
   const { label: countdown, expired } = useCountdown(expiresAt);
   const [isSimulating, setIsSimulating] = useState(false);
@@ -54,15 +58,19 @@ export default function PagamentoPixScreen() {
     try {
       await paymentService.simulatePayment(id);
 
-      if (projetoId && candidaturaId) {
+      // Atualiza contrato: dinheiro fica "retido" e projeto vai para em_andamento
+      if (contratoId) {
+        await authService.atualizarPagamentoContrato(contratoId, id);
+      } else if (projetoId && candidaturaId) {
+        // Fallback: fluxo legado sem contrato
         await authService.atualizarStatusCandidatura(projetoId, candidaturaId, 'aceito');
       }
 
       setIsPaid(true);
       Toast.show({
         type: 'success',
-        text1: 'Pagamento confirmado!',
-        text2: projetoId ? 'Desenvolvedor contratado com sucesso.' : 'Simulação de sandbox concluída.',
+        text1: 'Pagamento realizado!',
+        text2: 'Projeto em andamento. Chat desbloqueado.',
       });
     } catch (err) {
       Toast.show({
@@ -93,7 +101,23 @@ export default function PagamentoPixScreen() {
             </View>
             <Text style={styles.paidTitle}>Pagamento confirmado!</Text>
             <Text style={styles.paidText}>Sua transação foi processada com sucesso.</Text>
-            <Button title="Voltar ao início" onPress={() => router.push('/(app)')} style={styles.button} />
+            {/* Abre o chat se tiver contratoId, senão vai para meus-projetos */}
+            {contratoId ? (
+              <Button
+                title="Abrir Chat do Projeto"
+                onPress={() => router.replace({
+                  pathname: '/(app)/chat',
+                  params: { contratoId, projetoNome: projetoNome ?? '', devNome: devNome ?? '' },
+                })}
+                style={styles.button}
+              />
+            ) : (
+              <Button
+                title="Voltar ao início"
+                onPress={() => router.replace('/(app)/meus-projetos')}
+                style={styles.button}
+              />
+            )}
           </View>
         ) : (
           <>

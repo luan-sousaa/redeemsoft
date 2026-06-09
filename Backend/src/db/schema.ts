@@ -1,4 +1,5 @@
 import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm";
 
 // Adicionado: resetToken e resetTokenExpiry para o fluxo de recuperação de senha.
 export const usuario = sqliteTable("usuario",{
@@ -78,3 +79,40 @@ export const novoProjeto = sqliteTable("projeto",{
   dataCriacao: integer("dataCriacao", { mode: "timestamp" })
     .$defaultFn(() => new Date()),
 })
+
+// ─── Contrato — escrow entre empresa e dev ───────────────────────────────────
+// Criado quando empresa confirma contratação; dinheiro fica retido (escrow)
+// até ambos confirmarem entrega.
+export const contrato = sqliteTable("contrato", {
+  idContrato: integer("id").primaryKey({ autoIncrement: true }).notNull(),
+  candidaturaId: integer("candidaturaId").notNull()
+    .references(() => aplicacao.idAplicacao),
+  projetoId: integer("projetoId").notNull()
+    .references(() => novoProjeto.idProjeto),
+  empresaId: integer("empresaId").notNull()
+    .references(() => cliente.idCliente),
+  devId: integer("devId").notNull()
+    .references(() => desenvolvedor.idDev),
+  valorProjeto:   integer("valorProjeto").notNull(),   // centavos
+  taxaPlataforma: integer("taxaPlataforma").notNull(),  // 10% em centavos
+  valorTotal:     integer("valorTotal").notNull(),      // valorProjeto + taxaPlataforma
+  statusPagamento: text("statusPagamento", {
+    enum: ["pendente", "retido", "liberado", "cancelado"],
+  }).notNull().default("pendente"),
+  pixId:          text("pixId"),
+  confirmaEmpresa: integer("confirmaEmpresa").notNull().default(0),
+  confirmaDev:     integer("confirmaDev").notNull().default(0),
+  criadoEm:   text("criadoEm").notNull().default(sql`(datetime('now'))`),
+  concluidoEm: text("concluidoEm"),
+});
+
+// ─── Mensagem — chat entre empresa e dev após pagamento retido ───────────────
+export const mensagem = sqliteTable("mensagem", {
+  idMensagem: integer("id").primaryKey({ autoIncrement: true }).notNull(),
+  contratoId: integer("contratoId").notNull()
+    .references(() => contrato.idContrato, { onDelete: "cascade" }),
+  autorId:   integer("autorId").notNull(),
+  autorTipo: text("autorTipo", { enum: ["empresa", "dev"] }).notNull(),
+  texto:     text("texto").notNull(),
+  criadoEm:  text("criadoEm").notNull().default(sql`(datetime('now'))`),
+});

@@ -36,55 +36,65 @@ const CAND_STATUS_CONFIG = {
 
 // ─── Modal de candidatos ────────────────────────────────────────────────────────
 
+// Params para navegar à tela de confirmação de contratação
+type ConfirmarNavParams = {
+  devId: string;
+  candidaturaId: string;
+  projetoId: string;
+  projetoNome: string;
+  valorProjeto: string; // centavos como string
+};
+
 function CandidatosModal({
   projeto,
   desenvolvedores,
   onClose,
   onUpdate,
   onVerDev,
+  onContratar,
 }: {
   projeto: ProjetoEmpresa;
   desenvolvedores: Desenvolvedor[];
   onClose: () => void;
   onUpdate: () => void;
   onVerDev: (devId: string) => void;
+  // Pai fecha o modal e navega — navegação de dentro de <Modal> pode causar crash no NavigationContainer
+  onContratar: (params: ConfirmarNavParams) => void;
 }) {
-  const router = useRouter();
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   const devMap = Object.fromEntries(desenvolvedores.map((d) => [d.id, d]));
 
-  async function handleStatus(cand: Candidatura, status: 'aceito' | 'recusado') {
+  function handleStatus(cand: Candidatura, status: 'aceito' | 'recusado') {
     setLoadingId(cand.id);
+
+    if (status === 'aceito') {
+      // Sem API call aqui — o contrato/status são criados no fluxo de pagamento
+      onContratar({
+        devId:       String(cand.desenvolvedorId),
+        candidaturaId: String(cand.id),
+        projetoId:   String(projeto.id),
+        projetoNome: projeto.titulo,
+        // proposta em BRL → converte para centavos
+        valorProjeto: String(Math.round((cand.proposta || projeto.orcamento) * 100)),
+      });
+      setLoadingId(null);
+      return;
+    }
+
+    // status === 'recusado': ainda chama a API
     const dev = devMap[cand.desenvolvedorId];
-    try {
-      await authService.atualizarStatusCandidatura(projeto.id, cand.id, status);
-      if (status === 'aceito') {
-        // Navega para checkout para iniciar o pagamento
-        router.push({
-          pathname: '/(app)/checkout',
-          params: {
-            amount: String(Math.round((cand.proposta || projeto.orcamento) * 100)),
-            description: projeto.titulo,
-            projetoNome: projeto.titulo,
-            devNome: dev?.nome ?? cand.nomeDesenvolvedor ?? 'Desenvolvedor',
-            projetoId: projeto.id,
-            candidaturaId: cand.id,
-          },
-        });
-      } else {
+    authService.atualizarStatusCandidatura(projeto.id, cand.id, 'recusado')
+      .then(() => {
         Toast.show({
           type: 'success',
           text1: 'Candidato recusado',
           text2: `${dev?.nome ?? 'Desenvolvedor'} foi recusado com sucesso.`,
         });
         onUpdate();
-      }
-    } catch {
-      Toast.show({ type: 'error', text1: 'Erro', text2: 'Tente novamente.' });
-    } finally {
-      setLoadingId(null);
-    }
+      })
+      .catch(() => Toast.show({ type: 'error', text1: 'Erro', text2: 'Tente novamente.' }))
+      .finally(() => setLoadingId(null));
   }
 
   return (
@@ -194,9 +204,11 @@ function CandidatosModal({
 function ProjetoCard({
   projeto,
   onVerCandidatos,
+  onOpenChat,
 }: {
   projeto: ProjetoEmpresa;
   onVerCandidatos: () => void;
+  onOpenChat?: () => void;
 }) {
   const cfg = STATUS_CONFIG[projeto.status];
   const pendentes = projeto.candidaturas.filter((c) => c.status === 'pendente').length;
@@ -240,6 +252,14 @@ function ProjetoCard({
             {projeto.candidaturas.length} candidato{projeto.candidaturas.length !== 1 ? 's' : ''}
           </Text>
         </Pressable>
+
+        {/* Botão de chat para projetos em andamento */}
+        {projeto.status === 'em_andamento' && onOpenChat && (
+          <Pressable style={styles.chatBtn} onPress={onOpenChat}>
+            <Ionicons name="chatbubbles-outline" size={16} color={Colors.primary} />
+            <Text style={styles.chatBtnText}>Chat</Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -274,6 +294,18 @@ export default function MeusProjetosScreen() {
   }, []);
 
   useEffect(() => { carregar(); }, [carregar, user]);
+
+  const handleOpenChat = useCallback(async (projeto: ProjetoEmpresa) => {
+    try {
+      const c = await authService.getContratoPorProjeto(projeto.id);
+      router.push({
+        pathname: '/(app)/chat',
+        params: { contratoId: String(c.id), projetoNome: projeto.titulo, devNome: c.nomeDev ?? '' },
+      });
+    } catch {
+      Toast.show({ type: 'error', text1: 'Contrato não encontrado.' });
+    }
+  }, [router]);
 
   const totalCandPendentes = projetos.reduce(
     (acc, p) => acc + p.candidaturas.filter((c) => c.status === 'pendente').length,
@@ -331,6 +363,7 @@ export default function MeusProjetosScreen() {
             <ProjetoCard
               projeto={item}
               onVerCandidatos={() => setProjetoSelecionado(item)}
+              onOpenChat={item.status === 'em_andamento' ? () => handleOpenChat(item) : undefined}
             />
           )}
         />
@@ -351,6 +384,16 @@ export default function MeusProjetosScreen() {
                 pathname: '/(app)/desenvolvedor-detalhe',
                 params: { id: devId },
               });
+              navegandoRef.current = false;
+            }, 350);
+          }}
+          onContratar={(params) => {
+            if (navegandoRef.current) return;
+            navegandoRef.current = true;
+            setProjetoSelecionado(null); // fecha modal antes de navegar
+            setTimeout(() => {
+              // Vai para a tela de confirmação (não direto ao checkout)
+              router.push({ pathname: '/(app)/confirmar-contratacao', params });
               navegandoRef.current = false;
             }, 350);
           }}
@@ -455,6 +498,16 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   criarEmptyText: { fontSize: 14, color: Colors.primary, fontWeight: '600' },
+  chatBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: Colors.surfaceHighlight,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  chatBtnText: { fontSize: 12, color: Colors.primary, fontWeight: '600' },
 });
 
 const modal = StyleSheet.create({

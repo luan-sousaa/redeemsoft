@@ -69,6 +69,7 @@ export interface CandidaturaDetalhada {
 }
 export interface MinhaCandidatura {
   candidaturaId: string;
+  projetoId: string;
   titulo: string;
   stack: string;
   prazo: string;

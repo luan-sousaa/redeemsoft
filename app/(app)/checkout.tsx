@@ -8,10 +8,12 @@ import Toast from 'react-native-toast-message';
 import { Colors } from '@/constants/colors';
 import { paymentService } from '@/services/paymentService';
 import { Button } from '@/components/ui/Button';
+import { calcularValorTotal, formatarBRL } from '@/utils/pricing';
 
 export default function CheckoutScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{
+    contratoId?: string;   // ID do contrato criado em confirmar-contratacao
     amount?: string;
     description?: string;
     projetoNome?: string;
@@ -26,26 +28,27 @@ export default function CheckoutScreen() {
   const projetoNome = params.projetoNome;
   const devNome = params.devNome;
 
-  const amountFormatted = new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(amountCents / 100);
+  // Calcula taxa de 10% — empresa paga valorTotal, dev recebe valorProjeto
+  const pricing = calcularValorTotal(amountCents);
 
   async function handleGerarPix() {
     setIsLoading(true);
     try {
-      const payment = await paymentService.createPixPayment(amountCents, description);
-      router.push({
+      // Envia valorTotal (projeto + taxa) para a AbacatePay
+      const payment = await paymentService.createPixPayment(pricing.valorTotal, description);
+      // replace para remover checkout da pilha — usuário não volta para cá após pagar
+      router.replace({
         pathname: '/(app)/pagamento-pix',
         params: {
           id: payment.id,
           brCode: payment.brCode,
           brCodeBase64: payment.brCodeBase64,
           expiresAt: payment.expiresAt,
-          ...(params.projetoId && { projetoId: params.projetoId }),
+          ...(params.contratoId   && { contratoId: params.contratoId }),
+          ...(params.projetoId    && { projetoId: params.projetoId }),
           ...(params.candidaturaId && { candidaturaId: params.candidaturaId }),
           ...(projetoNome && { projetoNome }),
-          ...(devNome && { devNome }),
+          ...(devNome     && { devNome }),
         },
       });
     } catch (err) {
@@ -75,8 +78,9 @@ export default function CheckoutScreen() {
             <View style={styles.iconWrap}>
               <Ionicons name="pricetag-outline" size={32} color={Colors.primary} />
             </View>
-            <Text style={styles.label}>Total a pagar</Text>
-            <Text style={styles.amount}>{amountFormatted}</Text>
+            <Text style={styles.cardTitle}>Resumo do pagamento</Text>
+
+            {/* Projeto e desenvolvedor */}
             {projetoNome ? (
               <View style={styles.summaryRows}>
                 <View style={styles.summaryRow}>
@@ -93,6 +97,22 @@ export default function CheckoutScreen() {
             ) : (
               <Text style={styles.desc} numberOfLines={2}>{description}</Text>
             )}
+
+            {/* Breakdown de valores */}
+            <View style={styles.divider} />
+            <View style={styles.breakdownRow}>
+              <Text style={styles.breakdownLabel}>Valor do projeto</Text>
+              <Text style={styles.breakdownValue}>{formatarBRL(pricing.valorProjeto)}</Text>
+            </View>
+            <View style={styles.breakdownRow}>
+              <Text style={styles.breakdownLabelMuted}>Taxa da plataforma (10%)</Text>
+              <Text style={styles.breakdownValueMuted}>{formatarBRL(pricing.taxaPlataforma)}</Text>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.breakdownRow}>
+              <Text style={styles.totalLabel}>Total a pagar</Text>
+              <Text style={styles.totalValue}>{formatarBRL(pricing.valorTotal)}</Text>
+            </View>
           </View>
 
           <View style={styles.pixInfo}>
@@ -175,6 +195,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 16,
   },
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.text,
+    marginBottom: 12,
+  },
   label: {
     fontSize: 10,
     color: Colors.textSecondary,
@@ -185,6 +211,47 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: Colors.text,
     marginBottom: 8,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: Colors.border,
+    alignSelf: 'stretch',
+    marginVertical: 12,
+  },
+  breakdownRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignSelf: 'stretch',
+    marginBottom: 6,
+  },
+  breakdownLabel: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+  },
+  breakdownValue: {
+    fontSize: 13,
+    color: Colors.text,
+    fontWeight: '600',
+  },
+  breakdownLabelMuted: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    opacity: 0.7,
+  },
+  breakdownValueMuted: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    opacity: 0.7,
+  },
+  totalLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.text,
+  },
+  totalValue: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.primary,
   },
   desc: {
     fontSize: 14,

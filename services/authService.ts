@@ -65,6 +65,35 @@ export type Desenvolvedor = {
   projetos: string[];
 };
 
+export type Contrato = {
+  id: number;          // idContrato
+  candidaturaId: number;
+  projetoId: number;
+  empresaId: number;
+  devId: number;
+  valorProjeto: number;
+  taxaPlataforma: number;
+  valorTotal: number;
+  statusPagamento: 'pendente' | 'retido' | 'liberado' | 'cancelado';
+  pixId: string | null;
+  confirmaEmpresa: number; // 0 | 1
+  confirmaDev: number;     // 0 | 1
+  criadoEm: string;
+  concluidoEm: string | null;
+  nomeDev?: string;
+  nomeEmpresa?: string | null;
+  tituloProjeto?: string;
+};
+
+export type Mensagem = {
+  id: number;
+  contratoId: number;
+  autorId: number;
+  autorTipo: 'empresa' | 'dev';
+  texto: string;
+  criadoEm: string;
+};
+
 export type MinhaCandidatura = {
   candidaturaId: string;
   projetoId: string;
@@ -224,6 +253,56 @@ export const authService = {
 
   async candidatar(data: Omit<MinhaCandidatura, 'status' | 'dataEnvio' | 'candidaturaId'>): Promise<void> {
     await api.post('/candidaturas', { idProjeto: data.projetoId, proposta: data.preco });
+  },
+
+  // ─── Contrato / escrow ────────────────────────────────────────────────────
+
+  async criarContrato(data: {
+    candidaturaId: number;
+    projetoId: number;
+    devId: number;
+    valorProjeto: number; // centavos
+  }): Promise<Contrato> {
+    const raw = await api.post<any>('/contrato', data);
+    return { ...raw, id: raw.idContrato };
+  },
+
+  async getContratoPorProjeto(projetoId: string | number): Promise<Contrato> {
+    const raw = await api.get<any>(`/contrato/projeto/${projetoId}`);
+    return { ...raw, id: raw.idContrato };
+  },
+
+  async getContratoById(contratoId: string | number): Promise<Contrato> {
+    const raw = await api.get<any>(`/contrato/${contratoId}`);
+    return { ...raw, id: raw.idContrato };
+  },
+
+  async atualizarPagamentoContrato(contratoId: string | number, pixId: string): Promise<Contrato> {
+    const raw = await api.patch<any>(`/contrato/${contratoId}/pagamento`, { pixId });
+    return { ...raw, id: raw.idContrato };
+  },
+
+  async confirmarEntregaContrato(
+    contratoId: string | number,
+    tipo: 'empresa' | 'dev',
+  ): Promise<{ contrato: Contrato; ambosConfirmaram: boolean }> {
+    const res = await api.patch<any>(`/contrato/${contratoId}/confirmar-entrega`, { tipo });
+    return { contrato: { ...res.contrato, id: res.contrato.idContrato }, ambosConfirmaram: res.ambosConfirmaram };
+  },
+
+  async enviarMensagem(
+    contratoId: string | number,
+    autorId: number,
+    autorTipo: 'empresa' | 'dev',
+    texto: string,
+  ): Promise<Mensagem> {
+    const raw = await api.post<any>(`/contrato/${contratoId}/mensagem`, { autorId, autorTipo, texto });
+    return { ...raw, id: raw.idMensagem };
+  },
+
+  async getMensagens(contratoId: string | number): Promise<Mensagem[]> {
+    const data = await api.get<any[]>(`/contrato/${contratoId}/mensagens`);
+    return data.map((m) => ({ ...m, id: m.idMensagem }));
   },
 
   async getMinhaCandidaturas(): Promise<MinhaCandidatura[]> {

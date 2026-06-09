@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '@/constants/colors';
 import { authService } from '@/services/authService';
 import { useAuth } from '@/contexts/AuthContext';
+import Toast from 'react-native-toast-message';
 import { MinhaCandidatura } from '@/types';
 
 
@@ -46,7 +47,7 @@ const STATUS_CONFIG: Record<
 
 // ─── Card de candidatura ──────────────────────────────────────────────────────
 
-function CandidaturaCard({ item }: { item: MinhaCandidatura }) {
+function CandidaturaCard({ item, onOpenChat }: { item: MinhaCandidatura; onOpenChat?: () => void }) {
   const cfg = STATUS_CONFIG[item.status];
 
   const precoFormatado = item.preco.toLocaleString('pt-BR', {
@@ -92,6 +93,14 @@ function CandidaturaCard({ item }: { item: MinhaCandidatura }) {
         <View style={styles.dot} />
         <Text style={styles.footerDate}>{dataFormatada}</Text>
       </View>
+
+      {/* Botão de chat — visível apenas para candidaturas aceitas */}
+      {item.status === 'aceito' && onOpenChat && (
+        <Pressable style={styles.chatBtn} onPress={onOpenChat}>
+          <Ionicons name="chatbubbles-outline" size={15} color={Colors.primary} />
+          <Text style={styles.chatBtnText}>Abrir Chat do Projeto</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -103,6 +112,18 @@ export default function MinhasCandidaturasScreen() {
   const { user } = useAuth();
   const [candidaturas, setCandidaturas] = useState<MinhaCandidatura[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const handleOpenChat = useCallback(async (cand: MinhaCandidatura) => {
+    try {
+      const c = await authService.getContratoPorProjeto(cand.projetoId);
+      router.push({
+        pathname: '/(app)/chat',
+        params: { contratoId: String(c.id), projetoNome: cand.titulo, devNome: user?.name ?? '' },
+      });
+    } catch {
+      Toast.show({ type: 'error', text1: 'Contrato não encontrado.' });
+    }
+  }, [router, user]);
 
   const carregar = useCallback(async () => {
     if (!user) {
@@ -173,7 +194,12 @@ export default function MinhasCandidaturasScreen() {
               </Pressable>
             </View>
           }
-          renderItem={({ item }) => <CandidaturaCard item={item} />}
+          renderItem={({ item }) => (
+            <CandidaturaCard
+              item={item}
+              onOpenChat={item.status === 'aceito' ? () => handleOpenChat(item) : undefined}
+            />
+          )}
         />
       )}
     </SafeAreaView>
@@ -253,6 +279,18 @@ const styles = StyleSheet.create({
   footerText: { fontSize: 12, color: Colors.textSecondary, fontWeight: '500' },
   dot: { width: 3, height: 3, borderRadius: 2, backgroundColor: Colors.border },
   footerDate: { fontSize: 11, color: Colors.textSecondary, marginLeft: 'auto' },
+  chatBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+    backgroundColor: 'rgba(79,110,247,0.06)',
+  },
+  chatBtnText: { fontSize: 13, fontWeight: '700', color: Colors.primary },
 
   emptyContainer: {
     alignItems: 'center',

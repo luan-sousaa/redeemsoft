@@ -7,6 +7,7 @@ import projetoRoutes from './src/routes/projetoRoutes.js';
 import devRoutes from './src/routes/devRoutes.js';
 import candidaturaRoutes from './src/routes/candidaturaRoutes.js';
 import clienteRoutes from './src/routes/clienteRoutes.js';
+import contratoRoutes from './src/routes/contratoRoutes.js';
 
 const app = express();
 const PORT = Number(process.env['PORT']) || 3000;
@@ -21,6 +22,7 @@ app.use('/', projetoRoutes);
 app.use('/', devRoutes);
 app.use('/', candidaturaRoutes);
 app.use('/', clienteRoutes);
+app.use('/', contratoRoutes);
 
 // Executa migrações e só depois sobe o servidor
 migrate(db, { migrationsFolder: './drizzle' })
