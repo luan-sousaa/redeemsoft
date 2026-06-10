@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export const API_BASE_URL = 'https://redeemsoft-backend-production.up.railway.app';
+export const API_BASE_URL = 'https://redeemsoft-production.up.railway.app';
 
 const TOKEN_KEY = '@redeemsoft:token';
 let memoryToken: string | null = null;
