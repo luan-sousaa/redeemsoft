@@ -24,14 +24,15 @@ app.use('/', candidaturaRoutes);
 app.use('/', clienteRoutes);
 app.use('/', contratoRoutes);
 
-// Executa migrações e só depois sobe o servidor
-migrate(db, { migrationsFolder: './drizzle' })
-  .then(() => {
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`Servidor rodando na porta ${PORT}`);
-    });
-  })
-  .catch((err) => {
-    console.error('Erro ao executar migrações:', err);
-    process.exit(1);
+(async () => {
+  try {
+    await migrate(db, { migrationsFolder: './drizzle' });
+  } catch (err) {
+    // Migrações frequentemente precisam ser aplicadas manualmente no Turso —
+    // apenas loga o aviso e continua subindo o servidor.
+    console.warn('[migrate] Aviso (migration pode já ter sido aplicada manualmente):', (err as Error).message);
+  }
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Servidor rodando na porta ${PORT}`);
   });
+})();

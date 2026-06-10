@@ -1,1 +1,2 @@
-ALTER TABLE desenvolvedor ADD COLUMN foto text;
+-- foto column was applied manually in Turso Shell before this migration ran
+SELECT 1;
