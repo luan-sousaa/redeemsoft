@@ -49,9 +49,14 @@ async function request<T>(method: HttpMethod, path: string, body?: unknown): Pro
     });
 
     const text = await response.text();
-    const data = text ? JSON.parse(text) : null;
+    let data: Record<string, unknown> | null = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      throw new Error(`Erro ${response.status}: servidor retornou resposta inválida`);
+    }
 
-    if (!response.ok) throw new Error(data?.mensagem ?? `Erro ${response.status}`);
+    if (!response.ok) throw new Error(data?.mensagem as string ?? `Erro ${response.status}`);
     return data as T;
   } catch (err: unknown) {
     if (err instanceof Error && err.name === 'AbortError') {
