@@ -143,11 +143,11 @@ export default function EditarPerfilScreen() {
   }
 
   async function handleProjetoCellPress(index: number) {
-    const uri = await pickFromGallery();
-    if (uri) {
+    const result = await pickFromGallery();
+    if (result) {
       setProjetoFotos((prev) => {
         const next = [...prev];
-        next[index] = uri;
+        next[index] = result.uri;
         return next;
       });
     }

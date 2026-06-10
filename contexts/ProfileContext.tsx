@@ -15,6 +15,7 @@ const defaultProfile: DevProfile = {
   habilidades: [],
   certificados: [],
   fotoUri: null,
+  foto: null,
   projetoFotos: [null, null, null, null],
 };
 
