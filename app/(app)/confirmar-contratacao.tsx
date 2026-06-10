@@ -6,6 +6,7 @@
 // só muda quando o PIX for confirmado.
 
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -69,6 +70,7 @@ export default function ConfirmarContratacaoScreen() {
     experiencia: string | null;
     habilidades: string[];
     certificacoes: string[];
+    foto: string | null;
   };
   const [dev, setDev] = useState<DevData | null>(null);
 
@@ -83,6 +85,7 @@ export default function ConfirmarContratacaoScreen() {
           experiencia: d.experiencia,
           habilidades: parseList(d.habilidades),
           certificacoes: parseList(d.certificacoes),
+          foto: d.foto ?? null,
         });
       })
       .catch(() => {
@@ -159,7 +162,15 @@ export default function ConfirmarContratacaoScreen() {
               {/* Avatar + nome */}
               <View style={styles.devHeader}>
                 <View style={styles.avatar}>
-                  <Ionicons name="person" size={28} color={Colors.textSecondary} />
+                  {dev.foto ? (
+                    <Image
+                      source={{ uri: dev.foto }}
+                      style={{ width: 52, height: 52, borderRadius: 26 }}
+                      contentFit="cover"
+                    />
+                  ) : (
+                    <Ionicons name="person-circle-outline" size={36} color={Colors.textSecondary} />
+                  )}
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.devNome}>{dev.nome}</Text>

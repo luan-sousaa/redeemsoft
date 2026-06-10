@@ -24,6 +24,7 @@ export type Candidatura = {
   desenvolvedorId: string;
   nomeDesenvolvedor: string;
   experiencia: string;
+  foto: string | null;
   proposta: number;
   prazo: string;
   status: 'pendente' | 'aceito' | 'recusado';
@@ -62,6 +63,7 @@ export type Desenvolvedor = {
   sobreMim: string;
   habilidades: string;
   certificacoes: string;
+  foto: string | null;
   projetos: string[];
 };
 
@@ -178,6 +180,7 @@ export const authService = {
         desenvolvedorId: String(c.idDev),
         nomeDesenvolvedor: c.desenvolvedor?.nome ?? '',
         experiencia: c.desenvolvedor?.experiencia ?? '',
+        foto: c.desenvolvedor?.foto ?? null,
         proposta: c.proposta ?? 0,
         prazo: `${p.prazo} dias`,
         status: c.status,
@@ -225,6 +228,7 @@ export const authService = {
       sobreMim: d.sobreMim ?? '',
       habilidades: d.habilidades ?? '',
       certificacoes: d.certificacoes ?? '',
+      foto: d.foto ?? null,
       projetos: [],
     }));
   },
@@ -237,6 +241,7 @@ export const authService = {
     habilidades: string | null;
     certificacoes: string | null;
     experiencia: string | null;
+    foto: string | null;
     projetos: { titulo: string; stack: string }[];
   }> {
     return api.get(`/desenvolvedores/${id}`);

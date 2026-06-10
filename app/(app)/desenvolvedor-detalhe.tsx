@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -67,6 +68,7 @@ export default function DesenvolvedorDetalheScreen() {
     experiencia: string | null;
     habilidades: string[];
     certificacoes: string[];
+    foto: string | null;
     projetos: { titulo: string; stack: string }[];
   };
 
@@ -88,6 +90,7 @@ export default function DesenvolvedorDetalheScreen() {
         experiencia: data.experiencia,
         habilidades: parseList(data.habilidades),
         certificacoes: parseList(data.certificacoes),
+        foto: data.foto ?? null,
         projetos: data.projetos ?? [],
       });
     } catch {
@@ -132,9 +135,17 @@ export default function DesenvolvedorDetalheScreen() {
           {/* Hero */}
           <View style={styles.heroSection}>
             <View style={styles.avatarWrap}>
-              <View style={styles.avatarPlaceholder}>
-                <Ionicons name="person" size={48} color={Colors.textSecondary} />
-              </View>
+              {dev.foto ? (
+                <Image
+                  source={{ uri: dev.foto }}
+                  style={{ width: 96, height: 96, borderRadius: 48 }}
+                  contentFit="cover"
+                />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Ionicons name="person-circle-outline" size={56} color={Colors.textSecondary} />
+                </View>
+              )}
             </View>
             <Text style={styles.nome}>{dev.nome}</Text>
             <View style={styles.typeBadge}>

@@ -21,7 +21,7 @@ async function buildProjetosFormatados(projetos: typeof novoProjeto.$inferSelect
         idDev: a.aplicacao.idDev,
         proposta: a.aplicacao.proposta,
         status: a.aplicacao.status,
-        desenvolvedor: { nome: a.nomeDev, experiencia: a.dev.experiencia },
+        desenvolvedor: { nome: a.nomeDev, experiencia: a.dev.experiencia, foto: a.dev.foto },
       })),
   }));
 }

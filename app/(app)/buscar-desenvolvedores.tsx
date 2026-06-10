@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { Href, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -23,6 +24,7 @@ type Desenvolvedor = {
   sobreMim: string;
   habilidades: string;
   certificacoes: string;
+  foto: string | null;
   projetos: any[];
 };
 
@@ -40,7 +42,11 @@ function DevCard({
       {/* Linha superior: avatar + nome + preço */}
       <View style={styles.cardHeader}>
         <View style={styles.avatar}>
-          <Ionicons name="person" size={22} color={Colors.textSecondary} />
+          {dev.foto ? (
+            <Image source={{ uri: dev.foto }} style={styles.avatarImage} contentFit="cover" />
+          ) : (
+            <Ionicons name="person-circle-outline" size={32} color={Colors.textSecondary} />
+          )}
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.cardNome}>{dev.nome}</Text>
@@ -292,7 +298,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceHighlight,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
+  avatarImage: { width: 42, height: 42, borderRadius: 21 },
   cardNome: {
     color: Colors.text,
     fontSize: 16,

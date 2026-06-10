@@ -33,7 +33,9 @@ const GRID_GAP = 12;
 const GRID_PADDING = 24;
 const CELL_SIZE = (width - GRID_PADDING * 2 - GRID_GAP) / 2;
 
-async function pickFromGallery(): Promise<string | null> {
+type PickResult = { uri: string; base64: string };
+
+async function pickFromGallery(): Promise<PickResult | null> {
   const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (status !== 'granted') {
     Alert.alert('Permissão necessária', 'Permita o acesso à galeria nas configurações do dispositivo.');
@@ -44,12 +46,15 @@ async function pickFromGallery(): Promise<string | null> {
     allowsEditing: true,
     aspect: [1, 1],
     quality: 0.8,
+    base64: true,
   });
   if (result.canceled) return null;
-  return result.assets[0].uri;
+  const asset = result.assets[0];
+  if (!asset.base64) return null;
+  return { uri: asset.uri, base64: `data:image/jpeg;base64,${asset.base64}` };
 }
 
-async function pickFromCamera(): Promise<string | null> {
+async function pickFromCamera(): Promise<PickResult | null> {
   const { status } = await ImagePicker.requestCameraPermissionsAsync();
   if (status !== 'granted') {
     Alert.alert('Permissão necessária', 'Permita o acesso à câmera nas configurações do dispositivo.');
@@ -59,12 +64,15 @@ async function pickFromCamera(): Promise<string | null> {
     allowsEditing: true,
     aspect: [1, 1],
     quality: 0.8,
+    base64: true,
   });
   if (result.canceled) return null;
-  return result.assets[0].uri;
+  const asset = result.assets[0];
+  if (!asset.base64) return null;
+  return { uri: asset.uri, base64: `data:image/jpeg;base64,${asset.base64}` };
 }
 
-function showImageSourcePicker(onPick: (uri: string | null) => void) {
+function showImageSourcePicker(onPick: (result: PickResult | null) => void) {
   if (Platform.OS === 'ios') {
     ActionSheetIOS.showActionSheetWithOptions(
       { options: ['Cancelar', 'Câmera', 'Galeria'], cancelButtonIndex: 0 },
@@ -107,7 +115,8 @@ export default function EditarPerfilScreen() {
   const { profile, isLoading: isProfileLoading, updateProfile } = useProfile();
 
   const [sobre, setSobre] = useState(() => profile.sobreMim);
-  const [fotoUri, setFotoUri] = useState<string | null>(() => profile.fotoUri);
+  const [fotoUri, setFotoUri] = useState<string | null>(() => profile.fotoUri ?? profile.foto);
+  const [fotoBase64, setFotoBase64] = useState<string | null>(() => profile.foto ?? null);
   const [projetoFotos, setProjetoFotos] = useState<(string | null)[]>(() =>
     profile.projetoFotos.length === 4 ? [...profile.projetoFotos] : [null, null, null, null]
   );
@@ -118,14 +127,18 @@ export default function EditarPerfilScreen() {
     if (!hasInitialized.current && !isProfileLoading) {
       hasInitialized.current = true;
       setSobre(profile.sobreMim);
-      setFotoUri(profile.fotoUri);
+      setFotoUri(profile.fotoUri ?? profile.foto);
+      setFotoBase64(profile.foto ?? null);
       setProjetoFotos(profile.projetoFotos.length === 4 ? [...profile.projetoFotos] : [null, null, null, null]);
     }
   }, [profile, isProfileLoading]);
 
   function handleFotoPress() {
-    showImageSourcePicker((uri) => {
-      if (uri) setFotoUri(uri);
+    showImageSourcePicker((result) => {
+      if (result) {
+        setFotoUri(result.uri);
+        setFotoBase64(result.base64);
+      }
     });
   }
 
@@ -143,7 +156,7 @@ export default function EditarPerfilScreen() {
   async function handleSalvar() {
     setIsSaving(true);
     try {
-      await updateProfile({ sobreMim: sobre, fotoUri, projetoFotos });
+      await updateProfile({ sobreMim: sobre, fotoUri, foto: fotoBase64, projetoFotos });
       Toast.show({
         type: 'success',
         text1: 'Perfil atualizado com sucesso!',

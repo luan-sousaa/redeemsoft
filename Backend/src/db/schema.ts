@@ -26,7 +26,7 @@ export const desenvolvedor = sqliteTable("desenvolvedor",{
   habilidades: text("habilidades"),
   certificacoes: text("certificacoes"),
   experiencia: text("experiencia"),
-
+  foto: text("foto"),
 });
 
 export const cliente = sqliteTable("cliente",{

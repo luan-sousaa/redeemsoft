@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -135,7 +136,15 @@ function CandidatosModal({
                   >
                     <View style={modal.cardHeader}>
                       <View style={modal.avatar}>
-                        <Text style={modal.avatarLetter}>{dev?.nome.charAt(0) ?? '?'}</Text>
+                        {cand.foto ? (
+                          <Image
+                            source={{ uri: cand.foto }}
+                            style={{ width: 44, height: 44, borderRadius: 22 }}
+                            contentFit="cover"
+                          />
+                        ) : (
+                          <Text style={modal.avatarLetter}>{dev?.nome.charAt(0) ?? '?'}</Text>
+                        )}
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text style={modal.candName}>{dev?.nome ?? (cand.nomeDesenvolvedor || 'Desconhecido')}</Text>

@@ -15,7 +15,7 @@ const PORT = Number(process.env['PORT']) || 3000;
 app.use(cors());
 app.use(express.json());
 
-app.get('/health', (_req, res) => res.json({ status: 'ok', version: '2.1.0', routes: ['contrato', 'mensagem', 'escrow'] }));
+app.get('/health', (_req, res) => res.json({ status: 'ok', version: '2.2.0', routes: ['contrato', 'mensagem', 'escrow', 'dev_foto'] }));
 
 app.use('/', usuarioRoutes);
 app.use('/', projetoRoutes);

@@ -18,6 +18,7 @@ export const buscarDesenvolvedorPorId = async (req: Request, res: Response) => {
         habilidades: desenvolvedor.habilidades,
         certificacoes: desenvolvedor.certificacoes,
         experiencia: desenvolvedor.experiencia,
+        foto: desenvolvedor.foto,
       })
       .from(desenvolvedor)
       .innerJoin(usuario, eq(desenvolvedor.idUsuario, usuario.idUsuario))
@@ -49,6 +50,7 @@ export const encontrarDesenvolvedores = async (req: Request, res: Response) => {
         habilidades: desenvolvedor.habilidades,
         certificacoes: desenvolvedor.certificacoes,
         experiencia: desenvolvedor.experiencia,
+        foto: desenvolvedor.foto,
         nome: usuario.nome,
         email: usuario.email,
         cidade: usuario.cidade,
@@ -81,7 +83,7 @@ export const atualizarPerfilMeu = async (req: Request, res: Response) => {
   const idDev = req.user?.idDev;
   if (!idDev) return res.status(403).json({ mensagem: 'Apenas desenvolvedores podem acessar esta rota.' });
 
-  const { precoPorHora, sobreMim, habilidades, certificacoes, experiencia } = req.body;
+  const { precoPorHora, sobreMim, habilidades, certificacoes, experiencia, foto } = req.body;
 
   try {
     const [atualizado] = await db
@@ -92,6 +94,7 @@ export const atualizarPerfilMeu = async (req: Request, res: Response) => {
         habilidades,
         certificacoes,
         experiencia,
+        ...(foto !== undefined ? { foto } : {}),
       })
       .where(eq(desenvolvedor.idDev, idDev))
       .returning();
