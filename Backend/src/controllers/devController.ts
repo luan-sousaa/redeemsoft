@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { db } from '../db/db';
 import { desenvolvedor, usuario, aplicacao, novoProjeto } from '../db/schema';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 
 export const buscarDesenvolvedorPorId = async (req: Request, res: Response) => {
   const id = Number(req.params['id']);
@@ -26,12 +26,12 @@ export const buscarDesenvolvedorPorId = async (req: Request, res: Response) => {
 
     if (!dev) return res.status(404).json({ mensagem: 'Desenvolvedor não encontrado.' });
 
-    // Projetos em que o dev foi aceito
+    // Projetos do dev: pendentes (em análise) e aceitos (contratados), exceto recusados
     const projetos = await db
       .select({ titulo: novoProjeto.titulo, stack: novoProjeto.stack })
       .from(aplicacao)
       .innerJoin(novoProjeto, eq(aplicacao.idProjeto, novoProjeto.idProjeto))
-      .where(and(eq(aplicacao.idDev, id), eq(aplicacao.status, 'aceito')));
+      .where(and(eq(aplicacao.idDev, id), ne(aplicacao.status, 'recusado')));
 
     return res.status(200).json({ ...dev, projetos });
   } catch (error) {
