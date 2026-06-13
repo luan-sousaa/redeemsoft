@@ -144,8 +144,13 @@ export default function ConfiguracoesEmpresaScreen() {
   }
 
   useEffect(() => {
-    if (!idCliente || hasFetched.current) return;
+    if (hasFetched.current) return;
     hasFetched.current = true;
+
+    if (!idCliente) {
+      setIsLoading(false);
+      return;
+    }
 
     api.get<any>(`/clientes/${idCliente}`)
       .then((data) => {

@@ -97,6 +97,8 @@ export default function PerfilEmpresaScreen() {
   const [erro, setErro] = useState(false);
   const hasFetched = useRef(false);
 
+  const semPerfil = !idCliente;
+
   async function carregar() {
     if (!idCliente) { setIsLoading(false); return; }
     setErro(false);
@@ -130,7 +132,15 @@ export default function PerfilEmpresaScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      {isLoading ? (
+      {semPerfil ? (
+        <View style={styles.center}>
+          <Ionicons name="business-outline" size={56} color={Colors.textSecondary} />
+          <Text style={styles.erroText}>Perfil da empresa não configurado.</Text>
+          <Pressable style={styles.retryBtn} onPress={() => router.replace('/(app)/configuracoes-empresa' as any)}>
+            <Text style={styles.retryText}>Configurar agora</Text>
+          </Pressable>
+        </View>
+      ) : isLoading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={Colors.primary} />
         </View>

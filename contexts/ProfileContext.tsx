@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { profileService, type DevProfile } from '@/services/profileService';
+import { parseList } from '@/utils/parseList';
 import { useAuth } from './AuthContext';
 
 const FOTO_KEY = (userId: string) => `@redeemsoft:foto:${userId}`;
@@ -56,10 +57,10 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         if (cancelled) return;
 
         const habilidades = storedHabilidades
-          ? (JSON.parse(storedHabilidades) as string[])
+          ? parseList(storedHabilidades)
           : apiProfile.habilidades;
         const certificados = storedCertificados
-          ? (JSON.parse(storedCertificados) as string[])
+          ? parseList(storedCertificados)
           : apiProfile.certificados;
 
         setProfile({

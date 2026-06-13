@@ -5,7 +5,7 @@ const BASE_URL = 'https://api.abacatepay.com/v2';
 // Chave lida de app.json extra.abacateApiKey — nunca hardcoded no código
 const API_KEY: string =
   (Constants.expoConfig?.extra?.abacateApiKey as string | undefined) ??
-  'abc_dev_XZKJm2xEmtSbCnqfdaEwbqaJ'; // fallback sandbox
+  'abc_dev_hdyMQKefxf0GG4azfQMduhd1'; // fallback sandbox
 
 export type PixPayment = {
   id: string;

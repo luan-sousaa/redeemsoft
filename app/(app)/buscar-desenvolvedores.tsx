@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors } from '@/constants/colors';
 import { authService} from '@/services/authService';
+import { parseList } from '@/utils/parseList';
 
 type Desenvolvedor = {
   id: string;
@@ -60,38 +61,22 @@ function DevCard({
         {dev.descricao}
       </Text>
 
-      {/* Habilidades — parse seguro de JSON array ou string separada por vírgula */}
-    {(() => {
-      const skills: string[] = (() => {
-        try {
-          const parsed = typeof dev.habilidades === 'string'
-            ? JSON.parse(dev.habilidades)
-            : dev.habilidades;
-          if (Array.isArray(parsed)) return parsed;
-        } catch {
-          // fallback: string separada por vírgula
-        }
-        return dev.habilidades
-          ? dev.habilidades.split(',').map((s) => s.trim()).filter(Boolean)
-          : [];
-      })();
-      return (
-        <View style={styles.chips}>
-          {skills.length > 0
-            ? skills.slice(0, 3).map((skill, i) => (
-                <View key={i} style={styles.chip}>
-                  <Text style={styles.chipText}>{skill}</Text>
-                </View>
-              ))
-            : (
-                <View style={styles.chip}>
-                  <Text style={styles.chipText}>Não informado</Text>
-                </View>
-              )
-          }
-        </View>
-      );
-    })()}
+      {(() => {
+        const skills = parseList(dev.habilidades).slice(0, 3);
+        return (
+          <View style={styles.chips}>
+            {skills.length > 0 ? skills.map((skill, i) => (
+              <View key={i} style={styles.chip}>
+                <Text style={styles.chipText}>{skill}</Text>
+              </View>
+            )) : (
+              <View style={styles.chip}>
+                <Text style={styles.chipText}>Não informado</Text>
+              </View>
+            )}
+          </View>
+        );
+      })()}
     </Pressable>
   );
 }

@@ -1,6 +1,12 @@
 import { api } from './api';
 import { parseList } from '@/utils/parseList';
 
+function ensureArray(value: unknown): string[] {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (typeof value === 'string') return parseList(value);
+  return [];
+}
+
 export type DevProfile = {
   sobreMim: string;
   habilidades: string[];
@@ -47,8 +53,8 @@ export const profileService = {
 
     await api.put('/desenvolvedores/meu', {
       sobreMim: cache.sobreMim,
-      habilidades: serializeList(cache.habilidades),
-      certificacoes: serializeList(cache.certificados),
+      habilidades: serializeList(ensureArray(cache.habilidades)),
+      certificacoes: serializeList(ensureArray(cache.certificados)),
       experiencia: cache.sobreMim,
       ...(cache.foto !== undefined ? { foto: cache.foto } : {}),
     });

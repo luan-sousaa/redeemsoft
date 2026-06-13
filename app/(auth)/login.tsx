@@ -86,21 +86,20 @@ export default function LoginScreen() {
 
 
 async function handleLogin() {
+  setHasSubmitted(true);
+  if (!validate()) return;
+  setIsLoading(true);
   try {
-
     await login(email, senha);
-
-    console.log('Login feito com sucesso!');
-
-    router.replace('/(app)/sobre-mim' as Href);
-
+    // RootLayoutNav redireciona automaticamente ao detectar isAuthenticated = true
   } catch (error: unknown) {
-
     Toast.show({
       type: 'error',
       text1: 'Erro ao entrar',
       text2: error instanceof Error ? error.message : 'Ocorreu um erro inesperado',
     });
+  } finally {
+    setIsLoading(false);
   }
 }
 
