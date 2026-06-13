@@ -174,7 +174,10 @@ export const fazerLogin = async (req: Request, res: Response) => {
       const [d] = await db.select().from(desenvolvedor).where(eq(desenvolvedor.idUsuario, encontrado.idUsuario));
       idDev = d?.idDev ?? null;
     } else if (encontrado.type === 'client') {
-      const [c] = await db.select().from(cliente).where(eq(cliente.idUsuario, encontrado.idUsuario));
+      let [c] = await db.select().from(cliente).where(eq(cliente.idUsuario, encontrado.idUsuario));
+      if (!c) {
+        [c] = await db.insert(cliente).values({ idUsuario: encontrado.idUsuario }).returning();
+      }
       idCliente = c?.idCliente ?? null;
     }
 
