@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -16,12 +16,13 @@ import {
   Text,
   View,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors } from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAvatar } from '@/hooks/use-avatar';
-import { profileService } from '@/services/profileService';
+import { api } from '@/services/api';
 
 // ─── Item de configuração ─────────────────────────────────────────────────────
 
@@ -92,14 +93,20 @@ export default function ConfiguracoesScreen() {
   const router = useRouter();
   const { user, logout } = useAuth();
   const { avatarUri, pickAvatar, isPickerLoading } = useAvatar(user?.id ? Number(user.id) : undefined);
+  const [isSavingFoto, setIsSavingFoto] = useState(false);
 
   async function handleTrocarFoto() {
     const base64 = await pickAvatar();
     if (!base64) return;
+    setIsSavingFoto(true);
     try {
-      await profileService.update({ foto: `data:image/jpeg;base64,${base64}`, fotoUri: avatarUri });
-    } catch (e) {
-      console.error('Erro ao salvar foto:', e);
+      // Chamada direta para não sobrescrever sobreMim/habilidades/certificados do dev
+      await api.put('/desenvolvedores/meu', { foto: `data:image/jpeg;base64,${base64}` });
+      Toast.show({ type: 'success', text1: 'Foto atualizada!', text2: 'Sua foto já aparece para as empresas.' });
+    } catch (e: any) {
+      Toast.show({ type: 'error', text1: 'Erro ao salvar foto', text2: e?.message ?? 'Tente novamente.' });
+    } finally {
+      setIsSavingFoto(false);
     }
   }
 
@@ -160,7 +167,7 @@ export default function ConfiguracoesScreen() {
         {/* Card de perfil com link para prévia */}
         <View style={styles.profileCard}>
           {/* Toque no avatar abre o picker de foto da galeria */}
-          <Pressable style={styles.avatar} onPress={handleTrocarFoto} disabled={isPickerLoading}>
+          <Pressable style={styles.avatar} onPress={handleTrocarFoto} disabled={isPickerLoading || isSavingFoto}>
             {avatarUri ? (
               <Image source={{ uri: avatarUri }} style={styles.avatarImage} contentFit="cover" />
             ) : (
@@ -168,7 +175,13 @@ export default function ConfiguracoesScreen() {
                 {user?.name?.charAt(0).toUpperCase() ?? '?'}
               </Text>
             )}
-            {isPickerLoading && (
+            {/* Ícone de câmera sempre visível para indicar que é clicável */}
+            {!isPickerLoading && !isSavingFoto && (
+              <View style={styles.avatarOverlay}>
+                <Ionicons name="camera" size={16} color={Colors.white} />
+              </View>
+            )}
+            {(isPickerLoading || isSavingFoto) && (
               <View style={styles.avatarOverlay}>
                 <ActivityIndicator color={Colors.white} size="small" />
               </View>
