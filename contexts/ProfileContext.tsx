@@ -24,6 +24,7 @@ type ProfileContextValue = {
   profile: DevProfile;
   isLoading: boolean;
   updateProfile: (data: Partial<DevProfile>) => Promise<void>;
+  refreshFoto: (newFotoUri: string) => Promise<void>;
 };
 
 const ProfileContext = createContext<ProfileContextValue | null>(null);
@@ -133,8 +134,15 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     [user?.id]
   );
 
+  // Atualiza fotoUri localmente (state + AsyncStorage) sem chamar a API
+  const refreshFoto = useCallback(async (newFotoUri: string) => {
+    if (!user) return;
+    setProfile((prev) => ({ ...prev, fotoUri: newFotoUri }));
+    await AsyncStorage.setItem(FOTO_KEY(user.id), newFotoUri);
+  }, [user?.id]);
+
   return (
-    <ProfileContext.Provider value={{ profile, isLoading, updateProfile }}>
+    <ProfileContext.Provider value={{ profile, isLoading, updateProfile, refreshFoto }}>
       {children}
     </ProfileContext.Provider>
   );

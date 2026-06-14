@@ -21,6 +21,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors } from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/contexts/ProfileContext';
 import { useAvatar } from '@/hooks/use-avatar';
 import { api } from '@/services/api';
 
@@ -92,16 +93,20 @@ function Section({
 export default function ConfiguracoesScreen() {
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { refreshFoto } = useProfile();
   const { avatarUri, pickAvatar, isPickerLoading } = useAvatar(user?.id ? Number(user.id) : undefined);
   const [isSavingFoto, setIsSavingFoto] = useState(false);
 
   async function handleTrocarFoto() {
-    const base64 = await pickAvatar();
-    if (!base64) return;
+    const picked = await pickAvatar();
+    if (!picked) return;
+    const fotoData = `data:image/jpeg;base64,${picked.base64}`;
     setIsSavingFoto(true);
     try {
-      // Chamada direta para não sobrescrever sobreMim/habilidades/certificados do dev
-      await api.put('/desenvolvedores/meu', { foto: `data:image/jpeg;base64,${base64}` });
+      // Salva no backend
+      await api.put('/desenvolvedores/meu', { foto: fotoData });
+      // Atualiza ProfileContext (sobre-mim.tsx e DrawerMenu) e AsyncStorage
+      await refreshFoto(picked.uri);
       Toast.show({ type: 'success', text1: 'Foto atualizada!', text2: 'Sua foto já aparece para as empresas.' });
     } catch (e: any) {
       Toast.show({ type: 'error', text1: 'Erro ao salvar foto', text2: e?.message ?? 'Tente novamente.' });

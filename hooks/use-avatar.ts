@@ -16,8 +16,8 @@ export function useAvatar(idUsuario?: number) {
     });
   }, [idUsuario]);
 
-  // Retorna o base64 puro (sem prefixo data:) para envio ao backend, ou null se cancelado
-  async function pickAvatar(): Promise<string | null> {
+  // Retorna { uri, base64 } da foto escolhida, ou null se cancelado
+  async function pickAvatar(): Promise<{ uri: string; base64: string } | null> {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') return null;
@@ -33,9 +33,10 @@ export function useAvatar(idUsuario?: number) {
 
       if (!result.canceled && result.assets[0] && idUsuario) {
         const { uri, base64 } = result.assets[0];
+        if (!base64) return null;
         setAvatarUri(uri);
         await AsyncStorage.setItem(avatarKey(idUsuario), uri);
-        return base64 ?? null;
+        return { uri, base64 };
       }
     } catch (e) {
       console.error('Erro ao abrir galeria:', e);
