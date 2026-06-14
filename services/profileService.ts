@@ -56,7 +56,8 @@ export const profileService = {
       habilidades: serializeList(ensureArray(cache.habilidades)),
       certificacoes: serializeList(ensureArray(cache.certificados)),
       experiencia: cache.sobreMim,
-      ...(cache.foto !== undefined ? { foto: cache.foto } : {}),
+      // Só envia foto quando foi explicitamente passada no update — evita sobrescrever com null
+      ...(data.foto !== undefined ? { foto: data.foto } : {}),
     });
   },
 
