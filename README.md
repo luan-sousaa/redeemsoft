@@ -348,12 +348,12 @@ A branch `main` sempre reflete um estado válido e buildável do projeto.
 
 ## Autores
 
-| Nome | Papel |
-|---|---|
-| Anna Karla | Desenvolvimento |
-| Débora Amorim | Desenvolvimento |
-| Luan Bispo | Desenvolvimento |
-| Yasmin Gabrielly | Desenvolvimento |
+| Nome | Matrícula | Atribuição |
+|---|---|---|
+| Anna Karla | UC24102955 | Front-end |
+| Débora Amorim | UC24201539 | Prototipação |
+| Luan Bispo | UC24201444 | DevOps |
+| Yasmin Gabrielly | UC24201508 | Backend & DBA |
 
 **Curso:** Análise e Desenvolvimento de Sistemas  
 **Disciplina:** Desenvolvimento Mobile I
