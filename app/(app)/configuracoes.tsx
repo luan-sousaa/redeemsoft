@@ -4,10 +4,12 @@
 // O botão de editar avatar no card de perfil também vai para editar-perfil.
 
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import React, { useEffect } from 'react';
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -18,6 +20,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors } from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAvatar } from '@/hooks/use-avatar';
+import { profileService } from '@/services/profileService';
 
 // ─── Item de configuração ─────────────────────────────────────────────────────
 
@@ -87,6 +91,17 @@ function Section({
 export default function ConfiguracoesScreen() {
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { avatarUri, pickAvatar, isPickerLoading } = useAvatar(user?.id ? Number(user.id) : undefined);
+
+  async function handleTrocarFoto() {
+    const base64 = await pickAvatar();
+    if (!base64) return;
+    try {
+      await profileService.update({ foto: `data:image/jpeg;base64,${base64}`, fotoUri: avatarUri });
+    } catch (e) {
+      console.error('Erro ao salvar foto:', e);
+    }
+  }
 
   // Redireciona empresas para a tela de configurações específica
   useEffect(() => {
@@ -144,11 +159,21 @@ export default function ConfiguracoesScreen() {
       >
         {/* Card de perfil com link para prévia */}
         <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarLetter}>
-              {user?.name?.charAt(0).toUpperCase() ?? '?'}
-            </Text>
-          </View>
+          {/* Toque no avatar abre o picker de foto da galeria */}
+          <Pressable style={styles.avatar} onPress={handleTrocarFoto} disabled={isPickerLoading}>
+            {avatarUri ? (
+              <Image source={{ uri: avatarUri }} style={styles.avatarImage} contentFit="cover" />
+            ) : (
+              <Text style={styles.avatarLetter}>
+                {user?.name?.charAt(0).toUpperCase() ?? '?'}
+              </Text>
+            )}
+            {isPickerLoading && (
+              <View style={styles.avatarOverlay}>
+                <ActivityIndicator color={Colors.white} size="small" />
+              </View>
+            )}
+          </Pressable>
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>{user?.name}</Text>
             <Text style={styles.profileEmail}>{user?.email}</Text>
@@ -241,6 +266,19 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+  },
+  avatarOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 28,
   },
   avatarLetter: {
     fontSize: 22,

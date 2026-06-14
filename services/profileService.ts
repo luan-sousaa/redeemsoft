@@ -35,7 +35,7 @@ export const profileService = {
         sobreMim: data.sobreMim ?? '',
         habilidades: parseList(data.habilidades),
         certificados: parseList(data.certificacoes),
-        fotoUri: null,
+        fotoUri: data.foto ?? null,
         foto: data.foto ?? null,
         projetoFotos: [null, null, null, null],
       };

@@ -16,29 +16,33 @@ export function useAvatar(idUsuario?: number) {
     });
   }, [idUsuario]);
 
-  async function pickAvatar() {
+  // Retorna o base64 puro (sem prefixo data:) para envio ao backend, ou null se cancelado
+  async function pickAvatar(): Promise<string | null> {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') return;
+      if (status !== 'granted') return null;
 
       setIsPickerLoading(true);
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.8,
+        quality: 0.7,
+        base64: true,
       });
 
       if (!result.canceled && result.assets[0] && idUsuario) {
-        const uri = result.assets[0].uri;
+        const { uri, base64 } = result.assets[0];
         setAvatarUri(uri);
         await AsyncStorage.setItem(avatarKey(idUsuario), uri);
+        return base64 ?? null;
       }
     } catch (e) {
       console.error('Erro ao abrir galeria:', e);
     } finally {
       setIsPickerLoading(false);
     }
+    return null;
   }
 
   return { avatarUri, pickAvatar, isPickerLoading };
