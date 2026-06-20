@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { migrate } from 'drizzle-orm/libsql/migrator';
+import { sql } from 'drizzle-orm';
 import { db } from './src/db/db.js';
 import usuarioRoutes from './src/routes/usuarioRoutes.js';
 import projetoRoutes from './src/routes/projetoRoutes.js';
@@ -34,6 +35,24 @@ app.use('/', notificacaoRoutes);
     // apenas loga o aviso e continua subindo o servidor.
     console.warn('[migrate] Aviso (migration pode já ter sido aplicada manualmente):', (err as Error).message);
   }
+
+  // Criação direta da tabela notificacao — evita problemas do migrator com Turso
+  try {
+    await db.run(sql`
+      CREATE TABLE IF NOT EXISTS notificacao (
+        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+        idUsuario INTEGER NOT NULL,
+        tipo TEXT NOT NULL,
+        titulo TEXT NOT NULL,
+        corpo TEXT NOT NULL,
+        lida INTEGER NOT NULL DEFAULT 0,
+        criadoEm TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+  } catch (err) {
+    console.warn('[startup] Aviso ao criar tabela notificacao:', (err as Error).message);
+  }
+
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Servidor rodando na porta ${PORT}`);
   });
