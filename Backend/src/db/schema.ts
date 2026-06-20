@@ -27,6 +27,7 @@ export const desenvolvedor = sqliteTable("desenvolvedor",{
   certificacoes: text("certificacoes"),
   experiencia: text("experiencia"),
   foto: text("foto"),
+  projetos: text("projetos"), // JSON: [{id, titulo, stack, foto}]
 });
 
 export const cliente = sqliteTable("cliente",{
@@ -51,11 +52,11 @@ export const aplicacao = sqliteTable("aplicacao",{
   idDev: integer("idDev")
     .notNull()
     .references(() => desenvolvedor.idDev, { onDelete: "cascade" }),
-    
+
   idProjeto: integer("idProjeto")
     .notNull()
     .references(() => novoProjeto.idProjeto, { onDelete: "cascade" }),
-    
+
   proposta: real("proposta"),
   status: text("status", { enum: ["pendente", "aceito", "recusado"] }).notNull(),
 })
@@ -71,18 +72,16 @@ export const novoProjeto = sqliteTable("projeto",{
   prazo: integer("prazo").notNull(),
   modalidade: text("modalidade", { enum: ["presencial", "remoto", "híbrido"] }).notNull(),
   stack: text("stack").notNull(),
-  
+
   status: text("status", { enum: ["ativo", "em_andamento", "concluido"] })
     .notNull()
     .default("ativo"),
-    
+
   dataCriacao: integer("dataCriacao", { mode: "timestamp" })
     .$defaultFn(() => new Date()),
 })
 
 // ─── Contrato — escrow entre empresa e dev ───────────────────────────────────
-// Criado quando empresa confirma contratação; dinheiro fica retido (escrow)
-// até ambos confirmarem entrega.
 export const contrato = sqliteTable("contrato", {
   idContrato: integer("id").primaryKey({ autoIncrement: true }).notNull(),
   candidaturaId: integer("candidaturaId").notNull()
@@ -93,9 +92,9 @@ export const contrato = sqliteTable("contrato", {
     .references(() => cliente.idCliente),
   devId: integer("devId").notNull()
     .references(() => desenvolvedor.idDev),
-  valorProjeto:   integer("valorProjeto").notNull(),   // centavos
-  taxaPlataforma: integer("taxaPlataforma").notNull(),  // 10% em centavos
-  valorTotal:     integer("valorTotal").notNull(),      // valorProjeto + taxaPlataforma
+  valorProjeto:   integer("valorProjeto").notNull(),
+  taxaPlataforma: integer("taxaPlataforma").notNull(),
+  valorTotal:     integer("valorTotal").notNull(),
   statusPagamento: text("statusPagamento", {
     enum: ["pendente", "retido", "liberado", "cancelado"],
   }).notNull().default("pendente"),

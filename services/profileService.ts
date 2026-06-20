@@ -7,28 +7,43 @@ function ensureArray(value: unknown): string[] {
   return [];
 }
 
+export type ProjetoDev = {
+  id: string;
+  titulo: string;
+  stack: string[];
+  foto: string | null;
+};
+
 export type DevProfile = {
   sobreMim: string;
   habilidades: string[];
   certificados: string[];
   fotoUri: string | null;
   foto: string | null;
-  projetoFotos: (string | null)[];
+  projetos: ProjetoDev[];
   precoPorHora?: number;
 };
 
 // Cache local para refletir edições antes de novo fetch
 let cache: DevProfile | null = null;
 
-const EMPTY: DevProfile = { sobreMim: '', habilidades: [], certificados: [], fotoUri: null, foto: null, projetoFotos: [null, null, null, null], precoPorHora: 0 };
+const EMPTY: DevProfile = { sobreMim: '', habilidades: [], certificados: [], fotoUri: null, foto: null, projetos: [], precoPorHora: 0 };
 
 function serializeList(list: string[]): string {
   return JSON.stringify(list);
 }
 
+function parseProjetos(value: unknown): ProjetoDev[] {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try { return JSON.parse(value); } catch {}
+  }
+  return [];
+}
+
 export const profileService = {
   async get(): Promise<DevProfile> {
-    if (cache) return { ...cache, projetoFotos: [...cache.projetoFotos] };
+    if (cache) return { ...cache, projetos: [...cache.projetos] };
 
     try {
       const data = await api.get<any>('/desenvolvedores/meu');
@@ -38,7 +53,7 @@ export const profileService = {
         certificados: parseList(data.certificacoes),
         fotoUri: data.foto ?? null,
         foto: data.foto ?? null,
-        projetoFotos: [null, null, null, null],
+        projetos: parseProjetos(data.projetos),
         precoPorHora: data.precoPorHora ?? 0,
       };
     } catch (err) {
@@ -46,7 +61,7 @@ export const profileService = {
       cache = { ...EMPTY };
     }
 
-    return { ...cache!, projetoFotos: [...cache!.projetoFotos] };
+    return { ...cache!, projetos: [...cache!.projetos] };
   },
 
   async update(data: Partial<DevProfile>): Promise<void> {
@@ -59,8 +74,8 @@ export const profileService = {
       certificacoes: serializeList(ensureArray(cache.certificados)),
       experiencia: cache.sobreMim,
       ...(cache.precoPorHora !== undefined ? { precoPorHora: cache.precoPorHora } : {}),
-      // Só envia foto quando foi explicitamente passada no update — evita sobrescrever com null
       ...(data.foto !== undefined ? { foto: data.foto } : {}),
+      projetos: JSON.stringify(cache.projetos),
     });
   },
 

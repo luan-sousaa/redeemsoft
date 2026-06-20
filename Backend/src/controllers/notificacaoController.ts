@@ -3,6 +3,7 @@ import { db } from '../db/db';
 import { notificacao } from '../db/schema';
 import { eq, desc } from 'drizzle-orm';
 
+// ─── GET /notificacoes ────────────────────────────────────────────────────────
 export const getNotificacoes = async (req: Request, res: Response) => {
   const idUsuario = req.user?.idUsuario;
   if (!idUsuario) return res.status(401).json({ mensagem: 'Não autorizado.' });
@@ -21,6 +22,7 @@ export const getNotificacoes = async (req: Request, res: Response) => {
   }
 };
 
+// ─── PATCH /notificacoes/:id/lida ─────────────────────────────────────────────
 export const marcarLida = async (req: Request, res: Response) => {
   const idUsuario = req.user?.idUsuario;
   const id = Number(req.params['id']);
@@ -34,6 +36,7 @@ export const marcarLida = async (req: Request, res: Response) => {
   }
 };
 
+// ─── PATCH /notificacoes/lidas ────────────────────────────────────────────────
 export const marcarTodasLidas = async (req: Request, res: Response) => {
   const idUsuario = req.user?.idUsuario;
   if (!idUsuario) return res.status(401).json({ mensagem: 'Não autorizado.' });
@@ -43,5 +46,17 @@ export const marcarTodasLidas = async (req: Request, res: Response) => {
     return res.status(200).json({ ok: true });
   } catch {
     return res.status(500).json({ mensagem: 'Erro ao marcar notificações.' });
+  }
+};
+
+// ─── DELETE /notificacoes/:id ─────────────────────────────────────────────────
+export const deletarNotificacao = async (req: Request, res: Response) => {
+  const id = Number(req.params['id']);
+  if (isNaN(id)) return res.status(400).json({ mensagem: 'ID inválido.' });
+  try {
+    await db.delete(notificacao).where(eq(notificacao.idNotificacao, id));
+    return res.status(204).send();
+  } catch {
+    return res.status(500).json({ mensagem: 'Erro ao deletar notificação.' });
   }
 };

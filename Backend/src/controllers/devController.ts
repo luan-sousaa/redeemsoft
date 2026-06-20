@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { db } from '../db/db';
-import { desenvolvedor, usuario, aplicacao, novoProjeto } from '../db/schema';
+import { desenvolvedor, usuario, aplicacao, novoProjeto, cliente } from '../db/schema';
 import { and, eq, ne } from 'drizzle-orm';
 
 export const buscarDesenvolvedorPorId = async (req: Request, res: Response) => {
@@ -19,6 +19,7 @@ export const buscarDesenvolvedorPorId = async (req: Request, res: Response) => {
         certificacoes: desenvolvedor.certificacoes,
         experiencia: desenvolvedor.experiencia,
         foto: desenvolvedor.foto,
+        projetos: desenvolvedor.projetos,
       })
       .from(desenvolvedor)
       .innerJoin(usuario, eq(desenvolvedor.idUsuario, usuario.idUsuario))
@@ -26,14 +27,7 @@ export const buscarDesenvolvedorPorId = async (req: Request, res: Response) => {
 
     if (!dev) return res.status(404).json({ mensagem: 'Desenvolvedor não encontrado.' });
 
-    // Projetos do dev: pendentes (em análise) e aceitos (contratados), exceto recusados
-    const projetos = await db
-      .select({ titulo: novoProjeto.titulo, stack: novoProjeto.stack })
-      .from(aplicacao)
-      .innerJoin(novoProjeto, eq(aplicacao.idProjeto, novoProjeto.idProjeto))
-      .where(and(eq(aplicacao.idDev, id), ne(aplicacao.status, 'recusado')));
-
-    return res.status(200).json({ ...dev, projetos });
+    return res.status(200).json(dev);
   } catch (error) {
     return res.status(500).json({ mensagem: 'Erro ao buscar desenvolvedor.', error });
   }
@@ -51,6 +45,7 @@ export const encontrarDesenvolvedores = async (req: Request, res: Response) => {
         certificacoes: desenvolvedor.certificacoes,
         experiencia: desenvolvedor.experiencia,
         foto: desenvolvedor.foto,
+        projetos: desenvolvedor.projetos,
         nome: usuario.nome,
         email: usuario.email,
         cidade: usuario.cidade,
@@ -83,7 +78,7 @@ export const atualizarPerfilMeu = async (req: Request, res: Response) => {
   const idDev = req.user?.idDev;
   if (!idDev) return res.status(403).json({ mensagem: 'Apenas desenvolvedores podem acessar esta rota.' });
 
-  const { precoPorHora, sobreMim, habilidades, certificacoes, experiencia, foto } = req.body;
+  const { precoPorHora, sobreMim, habilidades, certificacoes, experiencia, foto, projetos } = req.body;
 
   try {
     const [atualizado] = await db
@@ -95,6 +90,7 @@ export const atualizarPerfilMeu = async (req: Request, res: Response) => {
         certificacoes,
         experiencia,
         ...(foto !== undefined ? { foto } : {}),
+        ...(projetos !== undefined ? { projetos } : {}),
       })
       .where(eq(desenvolvedor.idDev, idDev))
       .returning();
@@ -128,12 +124,12 @@ export const criarPerfilDev = async (req: Request, res: Response) => {
 
 export const atualizarPerfilDev = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { precoPorHora, sobreMim, habilidades, certificacoes, experiencia } = req.body;
+  const { precoPorHora, sobreMim, habilidades, certificacoes, experiencia, foto, projetos } = req.body;
 
   try {
     const [atualizado] = await db
       .update(desenvolvedor)
-      .set({ precoPorHora: precoPorHora ? Number(precoPorHora) : undefined, sobreMim, habilidades, certificacoes, experiencia })
+      .set({ precoPorHora: precoPorHora ? Number(precoPorHora) : undefined, sobreMim, habilidades, certificacoes, experiencia, foto, projetos })
       .where(eq(desenvolvedor.idDev, Number(id)))
       .returning();
 
@@ -151,5 +147,66 @@ export const deletarPerfilDev = async (req: Request, res: Response) => {
     return res.status(200).json(deletado);
   } catch (error) {
     return res.status(500).json({ mensagem: 'Erro ao deletar perfil.', error });
+  }
+};
+
+// ─── GET /chat/conversas — lista conversas ativas para o usuário logado ───────
+export const buscarConversas = async (req: Request, res: Response) => {
+  const { idDev, idCliente } = req.user ?? {};
+
+  try {
+    if (idDev) {
+      const conversas = await db
+        .select({
+          candidaturaId: aplicacao.idAplicacao,
+          projetoTitulo: novoProjeto.titulo,
+          projetoValor: novoProjeto.orcamento,
+          empresaNome: usuario.nome,
+        })
+        .from(aplicacao)
+        .innerJoin(novoProjeto, eq(aplicacao.idProjeto, novoProjeto.idProjeto))
+        .innerJoin(cliente, eq(novoProjeto.idCliente, cliente.idCliente))
+        .innerJoin(usuario, eq(cliente.idUsuario, usuario.idUsuario))
+        .where(and(eq(aplicacao.idDev, idDev), eq(aplicacao.status, 'aceito')));
+
+      return res.status(200).json(conversas.map(c => ({
+        id: String(c.candidaturaId),
+        nomeContato: c.empresaNome,
+        fotoContato: null,
+        projetoTitulo: c.projetoTitulo,
+        projetoValor: c.projetoValor,
+        tipo: 'empresa',
+      })));
+    }
+
+    if (idCliente) {
+      const conversas = await db
+        .select({
+          candidaturaId: aplicacao.idAplicacao,
+          projetoTitulo: novoProjeto.titulo,
+          projetoValor: novoProjeto.orcamento,
+          devNome: usuario.nome,
+          devFoto: desenvolvedor.foto,
+        })
+        .from(aplicacao)
+        .innerJoin(novoProjeto, eq(aplicacao.idProjeto, novoProjeto.idProjeto))
+        .innerJoin(desenvolvedor, eq(aplicacao.idDev, desenvolvedor.idDev))
+        .innerJoin(usuario, eq(desenvolvedor.idUsuario, usuario.idUsuario))
+        .where(and(eq(novoProjeto.idCliente, idCliente), eq(aplicacao.status, 'aceito')));
+
+      return res.status(200).json(conversas.map(c => ({
+        id: String(c.candidaturaId),
+        nomeContato: c.devNome,
+        fotoContato: c.devFoto,
+        projetoTitulo: c.projetoTitulo,
+        projetoValor: c.projetoValor,
+        tipo: 'dev',
+      })));
+    }
+
+    return res.status(200).json([]);
+  } catch (error) {
+    console.error('Erro ao buscar conversas:', error);
+    return res.status(500).json({ mensagem: 'Erro ao buscar conversas.', error });
   }
 };

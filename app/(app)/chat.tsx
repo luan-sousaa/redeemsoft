@@ -1,71 +1,78 @@
-// chat.tsx
-// Chat entre empresa e desenvolvedor para um contrato ativo.
-// Regras de negócio:
-//   - Chat só está disponível após pagamento retido (statusPagamento = 'retido' | 'liberado')
-//   - Empresa e dev podem confirmar entrega independentemente
-//   - Quando ambos confirmam: pagamento fica "liberado", projeto = "concluido"
-//   - Polling a cada 10 s para novas mensagens (intervalo limpo no unmount)
-//   - Optimistic update: mensagem aparece imediatamente na lista local
-
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter, type Href } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  KeyboardAvoidingView,
-  Platform,
+  Image,
   Pressable,
+  RefreshControl,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Toast from 'react-native-toast-message';
 
 import { Colors } from '@/constants/colors';
-import { useAuth } from '@/contexts/AuthContext';
-import { authService, type Contrato, type Mensagem } from '@/services/authService';
+import { api } from '@/services/api';
 
-// ─── Utilitários ──────────────────────────────────────────────────────────────
+// ─── Tipos ────────────────────────────────────────────────────────────────────
 
-function formatHora(iso: string): string {
-  try {
-    const d = new Date(iso);
-    const agora = new Date();
-    const diffMin = Math.floor((agora.getTime() - d.getTime()) / 60000);
+type Conversa = {
+  id: string;
+  nomeContato: string;
+  fotoContato: string | null;
+  projetoTitulo: string;
+  projetoValor: number;
+  tipo: 'dev' | 'empresa';
+};
 
-    if (diffMin < 1) return 'Agora';
-    if (diffMin < 60) return `há ${diffMin} min`;
+// ─── Avatar ───────────────────────────────────────────────────────────────────
 
-    const hora = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    const hoje = agora.toDateString();
-    const ontem = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() - 1).toDateString();
-
-    if (d.toDateString() === hoje) return hora;
-    if (d.toDateString() === ontem) return `Ontem ${hora}`;
-
-    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-  } catch {
-    return '';
+function AvatarConversa({ nome, foto }: { nome: string; foto: string | null }) {
+  if (foto) {
+    return <Image source={{ uri: foto }} style={styles.avatar} />;
   }
+  // Cor gerada pelo nome
+  const colors = ['#6C63FF', '#E84560', '#F5A623', '#4CAF50', '#00BCD4', '#9C27B0'];
+  const idx = nome.charCodeAt(0) % colors.length;
+  return (
+    <View style={[styles.avatar, { backgroundColor: colors[idx] }]}>
+      <Text style={styles.avatarLetter}>{nome.charAt(0).toUpperCase()}</Text>
+    </View>
+  );
 }
 
-// ─── Bolha de mensagem ────────────────────────────────────────────────────────
+// ─── Card de conversa ─────────────────────────────────────────────────────────
 
-function MsgBubble({ msg, isOwn }: { msg: Mensagem; isOwn: boolean }) {
+function ConversaCard({ conversa, onPress }: { conversa: Conversa; onPress: () => void }) {
   return (
-    <View style={[styles.bubbleWrap, isOwn ? styles.bubbleWrapRight : styles.bubbleWrapLeft]}>
-      <View style={[styles.bubble, isOwn ? styles.bubbleOwn : styles.bubbleOther]}>
-        <Text style={[styles.bubbleText, isOwn ? styles.bubbleTextOwn : styles.bubbleTextOther]}>
-          {msg.texto}
-        </Text>
-        <Text style={[styles.bubbleTime, isOwn ? styles.bubbleTimeOwn : styles.bubbleTimeOther]}>
-          {formatHora(msg.criadoEm)}
+    <Pressable style={styles.card} onPress={onPress}>
+      <AvatarConversa nome={conversa.nomeContato} foto={conversa.fotoContato} />
+
+      <View style={styles.cardContent}>
+        <View style={styles.cardTopRow}>
+          <Text style={styles.nomeContato} numberOfLines={1}>{conversa.nomeContato}</Text>
+          <View style={styles.valorTag}>
+            <Text style={styles.valorText}>
+              {conversa.projetoValor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.projetoRow}>
+          <Ionicons name="briefcase-outline" size={12} color={Colors.primary} />
+          <Text style={styles.projetoTitulo} numberOfLines={1}>{conversa.projetoTitulo}</Text>
+        </View>
+
+        <Text style={styles.ultimaMensagem} numberOfLines={1}>
+          Toque para abrir o chat
         </Text>
       </View>
-    </View>
+
+      <Ionicons name="chevron-forward" size={18} color={Colors.textSecondary} />
+    </Pressable>
   );
 }
 
@@ -73,254 +80,115 @@ function MsgBubble({ msg, isOwn }: { msg: Mensagem; isOwn: boolean }) {
 
 export default function ChatScreen() {
   const router = useRouter();
-  const { user } = useAuth();
-  const params = useLocalSearchParams<{
-    contratoId: string;
-    projetoNome?: string;
-    devNome?: string;
-  }>();
+  const [conversas, setConversas] = useState<Conversa[]>([]);
+  const [filtro, setFiltro] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const contratoId = params.contratoId;
-  const userTipo: 'empresa' | 'dev' = user?.type === 'client' ? 'empresa' : 'dev';
-
-  const [contrato, setContrato] = useState<Contrato | null>(null);
-  const [mensagens, setMensagens] = useState<Mensagem[]>([]);
-  const [texto, setTexto] = useState('');
-  const [isLoadingInit, setIsLoadingInit] = useState(true);
-  const [isSending, setIsSending] = useState(false);
-  const [isConfirmando, setIsConfirmando] = useState(false);
-
-  const listRef = useRef<FlatList>(null);
-  const isNavigating = useRef(false);
-
-  // ─── Carrega contrato ───────────────────────────────────────────────────────
-  const carregarContrato = useCallback(async () => {
-    if (!contratoId) return;
+  const carregar = useCallback(async () => {
     try {
-      const c = await authService.getContratoById(contratoId);
-      setContrato(c);
+      const data = await api.get<any[]>('/chat/conversas');
+      setConversas(
+        data.map(c => ({
+          id: c.id,
+          nomeContato: c.nomeContato,
+          fotoContato: c.fotoContato ?? null,
+          projetoTitulo: c.projetoTitulo,
+          projetoValor: c.projetoValor,
+          tipo: c.tipo,
+        }))
+      );
     } catch {
-      // silencia — pode tentar novamente no próximo poll
-    }
-  }, [contratoId]);
-
-  // ─── Carrega mensagens ──────────────────────────────────────────────────────
-  const carregarMensagens = useCallback(async () => {
-    if (!contratoId) return;
-    try {
-      const msgs = await authService.getMensagens(contratoId);
-      setMensagens(msgs);
-    } catch {
-      // silencia
-    }
-  }, [contratoId]);
-
-  // Mount: carrega tudo e inicia polling
-  useEffect(() => {
-    async function init() {
-      await Promise.all([carregarContrato(), carregarMensagens()]);
-      setIsLoadingInit(false);
-    }
-    init();
-
-    // Poll a cada 10 s para novas mensagens e status do contrato
-    const timer = setInterval(() => {
-      carregarMensagens();
-      carregarContrato();
-    }, 10_000);
-    return () => clearInterval(timer);
-  }, [carregarContrato, carregarMensagens]);
-
-  // Scrolla para o fim quando mensagens são atualizadas
-  useEffect(() => {
-    if (mensagens.length > 0) {
-      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
-    }
-  }, [mensagens.length]);
-
-  // ─── Enviar mensagem ────────────────────────────────────────────────────────
-  async function handleEnviar() {
-    const txt = texto.trim();
-    if (!txt || !user || isSending) return;
-
-    // Optimistic update — aparece imediatamente
-    const tempMsg: Mensagem = {
-      id: Date.now(),
-      contratoId: Number(contratoId),
-      autorId: Number(user.id),
-      autorTipo: userTipo,
-      texto: txt,
-      criadoEm: new Date().toISOString(),
-    };
-    setMensagens((prev) => [...prev, tempMsg]);
-    setTexto('');
-    setIsSending(true);
-
-    try {
-      const salva = await authService.enviarMensagem(contratoId, Number(user.id), userTipo, txt);
-      // Substitui o temp pela mensagem real do servidor
-      setMensagens((prev) => prev.map((m) => (m.id === tempMsg.id ? salva : m)));
-    } catch {
-      // Reverte optimistic update em caso de erro
-      setMensagens((prev) => prev.filter((m) => m.id !== tempMsg.id));
-      Toast.show({ type: 'error', text1: 'Erro ao enviar mensagem. Tente novamente.' });
+      // silencioso
     } finally {
-      setIsSending(false);
+      setIsLoading(false);
+      setRefreshing(false);
     }
-  }
+  }, []);
 
-  // ─── Confirmar entrega ──────────────────────────────────────────────────────
-  async function handleConfirmarEntrega() {
-    if (isConfirmando || !contratoId) return;
-    setIsConfirmando(true);
-    try {
-      const { contrato: atualizado, ambosConfirmaram } = await authService.confirmarEntregaContrato(contratoId, userTipo);
-      setContrato(atualizado);
-      if (ambosConfirmaram) {
-        Toast.show({
-          type: 'success',
-          text1: 'Entrega confirmada!',
-          text2: 'Pagamento liberado para o desenvolvedor.',
-        });
-      } else {
-        Toast.show({
-          type: 'success',
-          text1: 'Confirmação registrada',
-          text2: 'Aguardando confirmação da outra parte.',
-        });
-      }
-    } catch {
-      Toast.show({ type: 'error', text1: 'Erro ao confirmar entrega. Tente novamente.' });
-    } finally {
-      setIsConfirmando(false);
-    }
-  }
+  useEffect(() => { carregar(); }, [carregar]);
 
-  // ─── Estado do botão confirmar ──────────────────────────────────────────────
-  const jáConfirmou = contrato
-    ? (userTipo === 'empresa' ? contrato.confirmaEmpresa === 1 : contrato.confirmaDev === 1)
-    : false;
+  const conversasFiltradas = conversas.filter(c =>
+    c.nomeContato.toLowerCase().includes(filtro.toLowerCase()) ||
+    c.projetoTitulo.toLowerCase().includes(filtro.toLowerCase())
+  );
 
-  const statusPagamento = contrato?.statusPagamento ?? 'retido';
-  const mostrarConfirmar = statusPagamento === 'retido'; // esconde após liberado
-
-  // ─── Cabeçalho dinâmico ─────────────────────────────────────────────────────
-  const nomeContraparte = userTipo === 'empresa'
-    ? (contrato?.nomeDev ?? params.devNome ?? 'Desenvolvedor')
-    : (contrato?.nomeEmpresa ?? 'Empresa');
-  const tituloProjeto = contrato?.tituloProjeto ?? params.projetoNome ?? 'Projeto';
-
-  if (isLoadingInit) {
-    return (
-      <SafeAreaView style={styles.safe}>
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-        </View>
-      </SafeAreaView>
-    );
+  function abrirConversa(c: Conversa) {
+    router.push({
+      pathname: '/(app)/chat-conversa' as any,
+      params: {
+        conversaId: c.id,
+        nomeContato: c.nomeContato,
+        fotoContato: c.fotoContato ?? '',
+        projetoTitulo: c.projetoTitulo,
+        projetoValor: String(c.projetoValor),
+      },
+    });
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable style={styles.backBtn} onPress={() => {
-          if (isNavigating.current) return;
-          isNavigating.current = true;
-          router.back();
-        }}>
-          <Ionicons name="arrow-back" size={24} color={Colors.text} />
+        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <Ionicons name="chevron-back" size={24} color={Colors.text} />
         </Pressable>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle} numberOfLines={1}>{tituloProjeto}</Text>
-          <Text style={styles.headerSub} numberOfLines={1}>{nomeContraparte}</Text>
-        </View>
-        {/* Badge de status */}
-        <View style={[styles.statusBadge, statusPagamento === 'liberado' ? styles.badgeLiberado : styles.badgeRetido]}>
-          <Text style={[styles.statusText, statusPagamento === 'liberado' ? styles.textLiberado : styles.textRetido]}>
-            {statusPagamento === 'liberado' ? 'Concluído' : 'Em andamento'}
-          </Text>
-        </View>
+        <Text style={styles.title}>Mensagens</Text>
+        <View style={{ width: 40 }} />
       </View>
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={0}
-      >
-        {/* Lista de mensagens */}
+      {/* Barra de filtro */}
+      <View style={styles.searchContainer}>
+        <Ionicons name="search-outline" size={18} color={Colors.textSecondary} />
+        <TextInput
+          style={styles.searchInput}
+          value={filtro}
+          onChangeText={setFiltro}
+          placeholder="Buscar conversa ou projeto..."
+          placeholderTextColor={Colors.textSecondary}
+        />
+        {filtro.length > 0 && (
+          <Pressable onPress={() => setFiltro('')} hitSlop={8}>
+            <Ionicons name="close-circle" size={18} color={Colors.textSecondary} />
+          </Pressable>
+        )}
+      </View>
+
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      ) : conversasFiltradas.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="chatbubbles-outline" size={70} color={Colors.textSecondary} />
+          <Text style={styles.emptyTitle}>
+            {filtro ? 'Nenhuma conversa encontrada' : 'Nenhuma conversa ainda'}
+          </Text>
+          <Text style={styles.emptyText}>
+            {filtro
+              ? 'Tente buscar por outro nome ou projeto'
+              : 'As conversas aparecerão aqui quando uma candidatura for aceita'}
+          </Text>
+        </View>
+      ) : (
         <FlatList
-          ref={listRef}
-          data={mensagens}
-          keyExtractor={(item) => String(item.id)}
+          data={conversasFiltradas}
+          keyExtractor={item => item.id}
           contentContainerStyle={styles.lista}
           showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={styles.emptyChat}>
-              <Ionicons name="chatbubbles-outline" size={48} color={Colors.surfaceHighlight} />
-              <Text style={styles.emptyChatText}>Nenhuma mensagem ainda. Diga olá!</Text>
-            </View>
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => { setRefreshing(true); carregar(); }}
+              tintColor={Colors.primary}
+            />
           }
           renderItem={({ item }) => (
-            <MsgBubble
-              msg={item}
-              isOwn={item.autorId === Number(user?.id)}
-            />
+            <ConversaCard conversa={item} onPress={() => abrirConversa(item)} />
           )}
         />
-
-        {/* Área inferior: confirmar entrega + input */}
-        <SafeAreaView edges={['bottom']} style={styles.inputArea}>
-          {/* Botão confirmar entrega */}
-          {mostrarConfirmar && (
-            <Pressable
-              style={[styles.confirmarBtn, jáConfirmou && styles.confirmarBtnDisabled]}
-              onPress={jáConfirmou ? undefined : handleConfirmarEntrega}
-              disabled={jáConfirmou || isConfirmando}
-            >
-              {isConfirmando ? (
-                <ActivityIndicator size="small" color={Colors.text} />
-              ) : (
-                <>
-                  <Ionicons
-                    name={jáConfirmou ? 'time-outline' : 'checkmark-done-outline'}
-                    size={16}
-                    color={jáConfirmou ? Colors.textSecondary : Colors.text}
-                  />
-                  <Text style={[styles.confirmarText, jáConfirmou && styles.confirmarTextDisabled]}>
-                    {jáConfirmou ? 'Aguardando confirmação da outra parte...' : 'Confirmar Entrega'}
-                  </Text>
-                </>
-              )}
-            </Pressable>
-          )}
-
-          {/* Input de mensagem */}
-          <View style={styles.inputRow}>
-            <TextInput
-              style={styles.input}
-              placeholder="Digite uma mensagem..."
-              placeholderTextColor={Colors.textSecondary}
-              value={texto}
-              onChangeText={setTexto}
-              multiline
-              maxLength={1000}
-              returnKeyType="default"
-            />
-            <Pressable
-              style={[styles.sendBtn, (!texto.trim() || isSending) && styles.sendBtnDisabled]}
-              onPress={handleEnviar}
-              disabled={!texto.trim() || isSending}
-            >
-              {isSending ? (
-                <ActivityIndicator size="small" color={Colors.text} />
-              ) : (
-                <Ionicons name="send" size={18} color={Colors.text} />
-              )}
-            </Pressable>
-          </View>
-        </SafeAreaView>
-      </KeyboardAvoidingView>
+      )}
     </SafeAreaView>
   );
 }
@@ -329,112 +197,63 @@ export default function ChatScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 16, paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: Colors.border,
     gap: 12,
   },
-  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 15, fontWeight: '700', color: Colors.text },
-  headerSub: { fontSize: 12, color: Colors.textSecondary, marginTop: 1 },
-  statusBadge: {
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    alignSelf: 'center',
-  },
-  badgeRetido:  { backgroundColor: 'rgba(245,166,35,0.12)' },
-  badgeLiberado:{ backgroundColor: 'rgba(76,175,80,0.12)' },
-  statusText: { fontSize: 11, fontWeight: '700' },
-  textRetido:   { color: '#F5A623' },
-  textLiberado: { color: '#4CAF50' },
-
-  lista: { padding: 16, paddingBottom: 8, gap: 4 },
-
-  emptyChat: { alignItems: 'center', paddingTop: 60, gap: 12 },
-  emptyChatText: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center' },
-
-  // Bubbles
-  bubbleWrap: { marginVertical: 2 },
-  bubbleWrapRight: { alignItems: 'flex-end' },
-  bubbleWrapLeft:  { alignItems: 'flex-start' },
-  bubble: {
-    maxWidth: '78%',
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 4,
-  },
-  bubbleOwn:   { backgroundColor: Colors.primary, borderBottomRightRadius: 4 },
-  bubbleOther: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderBottomLeftRadius: 4 },
-  bubbleText: { fontSize: 14, lineHeight: 20 },
-  bubbleTextOwn:   { color: Colors.text },
-  bubbleTextOther: { color: Colors.text },
-  bubbleTime: { fontSize: 10, alignSelf: 'flex-end' },
-  bubbleTimeOwn:   { color: 'rgba(255,255,255,0.6)' },
-  bubbleTimeOther: { color: Colors.textSecondary },
-
-  // Área inferior
-  inputArea: {
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    backgroundColor: Colors.background,
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    paddingBottom: 8,
-    gap: 8,
-  },
-
-  // Confirmar entrega
-  confirmarBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: Colors.surfaceHighlight,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-  },
-  confirmarBtnDisabled: {
-    borderColor: Colors.border,
+  backBtn: {
+    width: 40, height: 40, borderRadius: 12,
     backgroundColor: Colors.surface,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: Colors.border,
   },
-  confirmarText: { fontSize: 13, fontWeight: '700', color: Colors.text },
-  confirmarTextDisabled: { color: Colors.textSecondary },
+  title: { flex: 1, fontSize: 22, fontWeight: '800', color: Colors.text, textAlign: 'center' },
 
-  // Input row
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
-  },
-  input: {
-    flex: 1,
+  searchContainer: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: Colors.surface,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    color: Colors.text,
-    fontSize: 14,
-    maxHeight: 100,
+    borderRadius: 14, borderWidth: 1, borderColor: Colors.border,
+    marginHorizontal: 16, marginVertical: 12,
+    paddingHorizontal: 14, paddingVertical: 10,
   },
-  sendBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+  searchInput: { flex: 1, fontSize: 15, color: Colors.text },
+
+  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+
+  lista: { paddingHorizontal: 16, paddingBottom: 40 },
+  separator: { height: 1, backgroundColor: Colors.border, marginLeft: 76 },
+
+  card: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingVertical: 14,
   },
-  sendBtnDisabled: { backgroundColor: Colors.surfaceHighlight },
+  avatar: {
+    width: 52, height: 52, borderRadius: 26,
+    alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
+  },
+  avatarLetter: { fontSize: 20, fontWeight: '800', color: '#fff' },
+
+  cardContent: { flex: 1, gap: 3 },
+  cardTopRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  nomeContato: { flex: 1, fontSize: 16, fontWeight: '700', color: Colors.text },
+  valorTag: {
+    backgroundColor: Colors.primary + '22',
+    borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2,
+  },
+  valorText: { fontSize: 12, fontWeight: '700', color: Colors.primary },
+
+  projetoRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  projetoTitulo: { fontSize: 12, color: Colors.primary, fontWeight: '600', flex: 1 },
+
+  ultimaMensagem: { fontSize: 13, color: Colors.textSecondary },
+
+  emptyContainer: {
+    flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 32,
+  },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: Colors.text, textAlign: 'center' },
+  emptyText: { fontSize: 13, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
 });

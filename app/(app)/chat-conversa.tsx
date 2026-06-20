@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
   FlatList,
@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Head from 'expo-router/head';
 import { Colors } from '@/constants/colors';
 
 // ─── Tipos ─────────────────────────────────────────────────────────────────────
@@ -91,28 +92,55 @@ function MessageBubble({ message, index }: { message: Message; index: number }) 
 
 // ─── Header ────────────────────────────────────────────────────────────────────
 
-function ChatHeader({ onBack }: { onBack: () => void }) {
+function ChatHeader({
+  onBack,
+  nome,
+  foto,
+  projetoTitulo,
+  projetoValor,
+}: {
+  onBack: () => void;
+  nome: string;
+  foto: string;
+  projetoTitulo: string;
+  projetoValor: number;
+}) {
+  const iniciais = nome.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase();
+  const valorFormatado = projetoValor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 });
+
   return (
     <View style={styles.header}>
       <Pressable onPress={onBack} style={styles.headerBack} hitSlop={12}>
         <Ionicons name="chevron-back" size={26} color={Colors.text} />
       </Pressable>
 
-      <View style={styles.headerAvatar}>
-        <Text style={styles.headerAvatarText}>JM</Text>
-      </View>
+      {foto ? (
+        <View style={styles.headerAvatar}>
+          {/* eslint-disable-next-line */}
+          <Text style={styles.headerAvatarText}>{iniciais}</Text>
+        </View>
+      ) : (
+        <View style={styles.headerAvatar}>
+          <Text style={styles.headerAvatarText}>{iniciais}</Text>
+        </View>
+      )}
 
       <View style={styles.headerInfo}>
-        <Text style={styles.headerName}>João Mendes</Text>
-        <View style={styles.headerStatus}>
-          <View style={styles.onlineDot} />
-          <Text style={styles.headerStatusText}>online</Text>
-        </View>
+        <Text style={styles.headerName} numberOfLines={1}>{nome || 'Chat'}</Text>
+        {projetoTitulo ? (
+          <View style={styles.projetoInfoRow}>
+            <Ionicons name="briefcase-outline" size={11} color={Colors.primary} />
+            <Text style={styles.projetoInfoText} numberOfLines={1}>
+              {projetoTitulo} · {valorFormatado}
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.headerStatus}>
+            <View style={styles.onlineDot} />
+            <Text style={styles.headerStatusText}>online</Text>
+          </View>
+        )}
       </View>
-
-      <Pressable style={styles.headerAction} hitSlop={12}>
-        <Ionicons name="call-outline" size={22} color={Colors.textSecondary} />
-      </Pressable>
 
       <Pressable style={styles.headerAction} hitSlop={12}>
         <Ionicons name="ellipsis-vertical" size={20} color={Colors.textSecondary} />
@@ -175,6 +203,18 @@ function InputBar({
 
 export default function ChatConversaScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{
+    nomeContato?: string;
+    fotoContato?: string;
+    projetoTitulo?: string;
+    projetoValor?: string;
+  }>();
+
+  const nomeContato = params.nomeContato ?? 'Chat';
+  const fotoContato = params.fotoContato ?? '';
+  const projetoTitulo = params.projetoTitulo ?? '';
+  const projetoValor = Number(params.projetoValor ?? 0);
+
   const listRef = useRef<FlatList>(null);
   const [messages, setMessages] = useState<Message[]>(MESSAGES_MOCK);
   const [inputText, setInputText] = useState('');
@@ -199,7 +239,17 @@ export default function ChatConversaScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
 
-      <ChatHeader onBack={() => router.back()} />
+       <Head>
+                    <title> Chat | RedeemSoft</title>
+                    <meta name="description" content="Veja suas candidaturas no RedeemSoft" />
+                  </Head>
+      <ChatHeader
+        onBack={() => router.back()}
+        nome={nomeContato}
+        foto={fotoContato}
+        projetoTitulo={projetoTitulo}
+        projetoValor={projetoValor}
+      />
 
       <KeyboardAvoidingView
         style={styles.flex}
@@ -296,6 +346,17 @@ const styles = StyleSheet.create({
   },
   headerAction: {
     padding: 6,
+  },
+  projetoInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  projetoInfoText: {
+    color: Colors.primary,
+    fontSize: 12,
+    fontWeight: '600',
+    flex: 1,
   },
 
   // ── Lista de mensagens

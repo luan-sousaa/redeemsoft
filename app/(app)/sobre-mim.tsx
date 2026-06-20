@@ -1,172 +1,437 @@
-// sobre-mim.tsx — Prévia pública do perfil do desenvolvedor (somente leitura).
-// Exibe foto, nome, bio, habilidades (chips), certificações (lista) e projetos (grid).
-// Dados vêm de ProfileContext (AsyncStorage + API) e AuthContext.
-// Acessível via DrawerMenu ("Meu Perfil") e configuracoes ("Ver prévia do perfil").
-
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+  ActionSheetIOS,
+  Alert,
+  Dimensions,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
-  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 
+import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
-import { useProfile } from '@/contexts/ProfileContext';
+import { profileService, type ProjetoDev } from '@/services/profileService';
 
 const { width } = Dimensions.get('window');
 const GRID_GAP = 12;
-const GRID_PADDING = 20;
-const CARD_SIZE = (width - GRID_PADDING * 2 - GRID_GAP) / 2;
+const GRID_PADDING = 24;
+const CARD_WIDTH = (width - GRID_PADDING * 2 - GRID_GAP) / 2;
 
-// ─── Componentes auxiliares ───────────────────────────────────────────────────
+// ─── Utils ────────────────────────────────────────────────────────────────────
 
-function SectionHeader({ title }: { title: string }) {
+async function pickFromGallery(): Promise<string | null> {
+  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (status !== 'granted') {
+    Alert.alert('Permissão necessária', 'Permita o acesso à galeria nas configurações.');
+    return null;
+  }
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    allowsEditing: true,
+    aspect: [4, 3],
+    quality: 0.8,
+  });
+  if (result.canceled) return null;
+  return result.assets[0].uri;
+}
+
+async function pickFromCamera(): Promise<string | null> {
+  const { status } = await ImagePicker.requestCameraPermissionsAsync();
+  if (status !== 'granted') {
+    Alert.alert('Permissão necessária', 'Permita o acesso à câmera nas configurações.');
+    return null;
+  }
+  const result = await ImagePicker.launchCameraAsync({
+    allowsEditing: true,
+    aspect: [4, 3],
+    quality: 0.8,
+  });
+  if (result.canceled) return null;
+  return result.assets[0].uri;
+}
+
+function showImageSourcePicker(onPick: (uri: string | null) => void) {
+  if (Platform.OS === 'ios') {
+    ActionSheetIOS.showActionSheetWithOptions(
+      { options: ['Cancelar', 'Câmera', 'Galeria'], cancelButtonIndex: 0 },
+      async (idx) => {
+        if (idx === 1) onPick(await pickFromCamera());
+        else if (idx === 2) onPick(await pickFromGallery());
+      }
+    );
+  } else {
+    Alert.alert('Imagem do projeto', 'Escolha a origem', [
+      { text: 'Cancelar', style: 'cancel', onPress: () => onPick(null) },
+      { text: 'Câmera', onPress: async () => onPick(await pickFromCamera()) },
+      { text: 'Galeria', onPress: async () => onPick(await pickFromGallery()) },
+    ]);
+  }
+}
+
+// ─── Modal de adicionar/editar projeto ───────────────────────────────────────
+
+type ProjetoModalProps = {
+  visible: boolean;
+  projeto: Partial<ProjetoDev> | null;
+  onClose: () => void;
+  onSave: (p: ProjetoDev) => void;
+};
+
+const STACK_SUGERIDAS = ['React', 'React Native', 'Node.js', 'TypeScript', 'Python', 'Flutter', 'Vue', 'Angular', 'Django', 'Laravel'];
+
+function ProjetoModal({ visible, projeto, onClose, onSave }: ProjetoModalProps) {
+  const [titulo, setTitulo] = useState('');
+  const [stack, setStack] = useState<string[]>([]);
+  const [stackInput, setStackInput] = useState('');
+  const [foto, setFoto] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (visible) {
+      setTitulo(projeto?.titulo ?? '');
+      setStack(projeto?.stack ?? []);
+      setStackInput('');
+      setFoto(projeto?.foto ?? null);
+    }
+  }, [visible, projeto]);
+
+  function addStack(tag: string) {
+    const t = tag.trim();
+    if (t && !stack.includes(t)) setStack(prev => [...prev, t]);
+    setStackInput('');
+  }
+
+  function removeStack(tag: string) {
+    setStack(prev => prev.filter(s => s !== tag));
+  }
+
+  function handleSave() {
+    if (!titulo.trim()) {
+      Toast.show({ type: 'error', text1: 'Informe o título do projeto' });
+      return;
+    }
+    onSave({
+      id: projeto?.id ?? String(Date.now()),
+      titulo: titulo.trim(),
+      stack,
+      foto,
+    });
+  }
+
   return (
-    <View style={styles.sectionHeaderRow}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-    </View>
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+      <SafeAreaView style={modal.safe}>
+        <View style={modal.header}>
+          <Pressable onPress={onClose} style={modal.closeBtn}>
+            <Ionicons name="chevron-down" size={24} color={Colors.textSecondary} />
+          </Pressable>
+          <Text style={modal.headerTitle}>{projeto?.id ? 'Editar Projeto' : 'Novo Projeto'}</Text>
+          <View style={{ width: 40 }} />
+        </View>
+
+        <ScrollView contentContainerStyle={modal.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          {/* Imagem */}
+          <Pressable style={modal.photoArea} onPress={() => showImageSourcePicker(uri => { if (uri) setFoto(uri); })}>
+            {foto ? (
+              <Image source={{ uri: foto }} style={modal.photoImage} />
+            ) : (
+              <View style={modal.photoEmpty}>
+                <Ionicons name="image-outline" size={36} color={Colors.textSecondary} />
+                <Text style={modal.photoEmptyText}>Toque para adicionar imagem</Text>
+              </View>
+            )}
+            <View style={modal.cameraChip}>
+              <Ionicons name="camera" size={14} color="#fff" />
+              <Text style={modal.cameraChipText}>Alterar foto</Text>
+            </View>
+          </Pressable>
+
+          {/* Título */}
+          <Text style={modal.label}>Título do projeto *</Text>
+          <View style={modal.inputContainer}>
+            <TextInput
+              style={modal.input}
+              value={titulo}
+              onChangeText={setTitulo}
+              placeholder="Ex: Portal de licitações com IA"
+              placeholderTextColor={Colors.textSecondary}
+              maxLength={80}
+            />
+          </View>
+
+          {/* Stack */}
+          <Text style={modal.label}>Tecnologias utilizadas</Text>
+          <View style={modal.inputContainer}>
+            <TextInput
+              style={modal.input}
+              value={stackInput}
+              onChangeText={setStackInput}
+              placeholder="Digite e pressione +"
+              placeholderTextColor={Colors.textSecondary}
+              onSubmitEditing={() => addStack(stackInput)}
+              returnKeyType="done"
+            />
+            <Pressable style={modal.addTagBtn} onPress={() => addStack(stackInput)}>
+              <Ionicons name="add" size={20} color={Colors.primary} />
+            </Pressable>
+          </View>
+
+          {/* Chips stack adicionadas */}
+          {stack.length > 0 && (
+            <View style={modal.chipsRow}>
+              {stack.map(s => (
+                <Pressable key={s} style={modal.chip} onPress={() => removeStack(s)}>
+                  <Text style={modal.chipText}>{s}</Text>
+                  <Ionicons name="close" size={12} color={Colors.primary} />
+                </Pressable>
+              ))}
+            </View>
+          )}
+
+          {/* Sugestões */}
+          <Text style={modal.subLabel}>Sugestões</Text>
+          <View style={modal.chipsRow}>
+            {STACK_SUGERIDAS.filter(s => !stack.includes(s)).map(s => (
+              <Pressable key={s} style={modal.chipSugerida} onPress={() => addStack(s)}>
+                <Text style={modal.chipSugeridaText}>{s}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </ScrollView>
+
+        <View style={modal.footer}>
+          <Button title="Salvar Projeto" onPress={handleSave} />
+        </View>
+      </SafeAreaView>
+    </Modal>
   );
 }
 
-function SkillChip({ label }: { label: string }) {
-  return (
-    <View style={styles.chip}>
-      <Text style={styles.chipText}>{label}</Text>
-    </View>
-  );
-}
+// ─── Card de projeto ──────────────────────────────────────────────────────────
 
-function CertRow({ label }: { label: string }) {
+function ProjetoCard({
+  projeto,
+  onEdit,
+  onDelete,
+}: {
+  projeto: ProjetoDev;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
   return (
-    <View style={styles.certRow}>
-      <View style={styles.certIconWrap}>
-        <Ionicons name="ribbon-outline" size={18} color={Colors.primary} />
+    <View style={styles.card}>
+      {/* Imagem */}
+      <View style={styles.cardImageContainer}>
+        {projeto.foto ? (
+          <Image source={{ uri: projeto.foto }} style={styles.cardImage} />
+        ) : (
+          <View style={styles.cardImageEmpty}>
+            <Ionicons name="code-slash-outline" size={32} color={Colors.textSecondary} />
+          </View>
+        )}
       </View>
-      <Text style={styles.certText} numberOfLines={2}>{label}</Text>
-    </View>
-  );
-}
 
-function ProjetoCard({ uri, index }: { uri: string; index: number }) {
-  return (
-    <View style={styles.projetoCard}>
-      <Image source={{ uri }} style={styles.projetoImage} contentFit="cover" />
-      <View style={styles.projetoLabelRow}>
-        <Ionicons name="briefcase-outline" size={11} color={Colors.primary} />
-        <Text style={styles.projetoLabelText}>Projeto {index + 1}</Text>
+      {/* Conteúdo */}
+      <View style={styles.cardBody}>
+        <Text style={styles.cardTitulo} numberOfLines={2}>{projeto.titulo}</Text>
+
+        {/* Stack chips */}
+        {projeto.stack.length > 0 && (
+          <View style={styles.stackRow}>
+            {projeto.stack.slice(0, 3).map(s => (
+              <View key={s} style={styles.stackChip}>
+                <Text style={styles.stackChipText}>{s}</Text>
+              </View>
+            ))}
+            {projeto.stack.length > 3 && (
+              <View style={styles.stackChip}>
+                <Text style={styles.stackChipText}>+{projeto.stack.length - 3}</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Ações */}
+        <View style={styles.cardActions}>
+          <Pressable style={styles.editBtn} onPress={onEdit}>
+            <Ionicons name="pencil-outline" size={14} color={Colors.primary} />
+            <Text style={styles.editBtnText}>Editar</Text>
+          </Pressable>
+          <Pressable style={styles.deleteBtn} onPress={onDelete}>
+            <Ionicons name="trash-outline" size={16} color={Colors.error} />
+          </Pressable>
+        </View>
       </View>
     </View>
   );
 }
 
-function EmptyHint({ text }: { text: string }) {
-  return <Text style={styles.emptyHint}>{text}</Text>;
-}
-
-// ─── Tela ─────────────────────────────────────────────────────────────────────
+// ─── Tela principal ───────────────────────────────────────────────────────────
 
 export default function SobreMimScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const { profile } = useProfile();
 
-  const { sobreMim, habilidades, certificados, fotoUri, projetoFotos } = profile;
-  const projetosComFoto = projetoFotos.filter((uri): uri is string => !!uri);
+  const [sobre, setSobre] = useState('');
+  const [fotoUri, setFotoUri] = useState<string | null>(null);
+  const [projetos, setProjetos] = useState<ProjetoDev[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [projetoEditando, setProjetoEditando] = useState<Partial<ProjetoDev> | null>(null);
+
+  useEffect(() => {
+    profileService.get().then((p) => {
+      setSobre(p.sobreMim);
+      setFotoUri(p.fotoUri);
+      setProjetos(p.projetos);
+    });
+  }, []);
+
+  function handleFotoPress() {
+    showImageSourcePicker((uri) => { if (uri) setFotoUri(uri); });
+  }
+
+  function abrirModal(projeto?: ProjetoDev) {
+    setProjetoEditando(projeto ?? null);
+    setModalVisible(true);
+  }
+
+  function salvarProjeto(p: ProjetoDev) {
+    setProjetos(prev => {
+      const idx = prev.findIndex(x => x.id === p.id);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = p;
+        return next;
+      }
+      return [...prev, p];
+    });
+    setModalVisible(false);
+  }
+
+  function confirmarDeletar(id: string) {
+    Alert.alert('Remover projeto', 'Tem certeza que deseja remover este projeto?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Remover',
+        style: 'destructive',
+        onPress: () => setProjetos(prev => prev.filter(p => p.id !== id)),
+      },
+    ]);
+  }
+
+  async function handleSalvar() {
+    setIsLoading(true);
+    try {
+      await profileService.update({ sobreMim: sobre, fotoUri, projetos });
+      Toast.show({ type: 'success', text1: 'Perfil atualizado!', text2: 'Suas informações foram salvas.' });
+      router.back();
+    } catch {
+      Toast.show({ type: 'error', text1: 'Erro ao salvar', text2: 'Tente novamente.' });
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable style={styles.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={Colors.text} />
-        </Pressable>
-        <Text style={styles.headerTitle}>Meu Perfil</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Pressable style={styles.backBtn} onPress={() => router.back()}>
+            <Ionicons name="arrow-back-circle-outline" size={30} color={Colors.text} />
+          </Pressable>
+          <Text style={styles.headerTitle} numberOfLines={1}>{user?.name ?? 'Meu Perfil'}</Text>
+        </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-
-        {/* Hero: foto + nome + badge */}
-        <View style={styles.heroSection}>
-          <View style={styles.avatarWrap}>
-            {fotoUri ? (
-              <Image source={{ uri: fotoUri }} style={styles.avatarImage} contentFit="cover" />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Ionicons name="person" size={48} color={Colors.textSecondary} />
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          {/* Foto de perfil */}
+          <View style={styles.photoSection}>
+            <Pressable style={styles.photoContainer} onPress={handleFotoPress}>
+              {fotoUri ? (
+                <Image source={{ uri: fotoUri }} style={styles.photoImage} />
+              ) : (
+                <View style={styles.photoPlaceholder}>
+                  <Ionicons name="camera-outline" size={32} color={Colors.textSecondary} />
+                  <Text style={styles.photoLabel}>Foto</Text>
+                </View>
+              )}
+              <View style={styles.cameraOverlay}>
+                <Ionicons name="camera" size={14} color={Colors.text} />
               </View>
-            )}
+            </Pressable>
           </View>
-          <Text style={styles.nome}>{user?.name ?? 'Desenvolvedor'}</Text>
-          <View style={styles.typeBadge}>
-            <Ionicons name="code-slash-outline" size={12} color={Colors.primary} />
-            <Text style={styles.typeBadgeText}>Desenvolvedor</Text>
-          </View>
-        </View>
 
-        {/* Sobre Mim */}
-        <View style={styles.section}>
-          <SectionHeader title="Sobre Mim" />
-          <View style={styles.textCard}>
-            {sobreMim ? (
-              <Text style={styles.bioText}>{sobreMim}</Text>
-            ) : (
-              <EmptyHint text="Nenhuma bio cadastrada ainda." />
-            )}
+          {/* Sobre */}
+          <Text style={styles.sectionLabel}>Sobre mim</Text>
+          <View style={styles.sobreContainer}>
+            <TextInput
+              style={styles.sobreInput}
+              value={sobre}
+              onChangeText={setSobre}
+              placeholder="Fale sobre você, suas experiências e o que você faz de melhor..."
+              placeholderTextColor={Colors.textSecondary}
+              multiline
+              numberOfLines={5}
+              textAlignVertical="top"
+              selectionColor={Colors.primary}
+              maxLength={500}
+            />
+            <Text style={styles.charCount}>{sobre.length}/500</Text>
           </View>
-        </View>
 
-        {/* Habilidades */}
-        <View style={styles.section}>
-          <SectionHeader title="Habilidades" />
-          {habilidades.length > 0 ? (
-            <View style={styles.chipsWrap}>
-              {habilidades.map((h) => (
-                <SkillChip key={h} label={h} />
-              ))}
-            </View>
+          {/* Projetos */}
+          <View style={styles.projetosHeader}>
+            <Text style={styles.sectionLabel}>Meus Projetos</Text>
+            <Pressable style={styles.addProjetoBtn} onPress={() => abrirModal()}>
+              <Ionicons name="add" size={18} color={Colors.primary} />
+              <Text style={styles.addProjetoBtnText}>Adicionar</Text>
+            </Pressable>
+          </View>
+
+          {projetos.length === 0 ? (
+            <Pressable style={styles.projetosEmpty} onPress={() => abrirModal()}>
+              <Ionicons name="briefcase-outline" size={36} color={Colors.textSecondary} />
+              <Text style={styles.projetosEmptyText}>Nenhum projeto adicionado ainda</Text>
+              <Text style={styles.projetosEmptySubtext}>Adicione projetos para mostrar seu portfólio</Text>
+            </Pressable>
           ) : (
-            <EmptyHint text="Nenhuma habilidade cadastrada ainda." />
-          )}
-        </View>
-
-        {/* Certificações */}
-        <View style={styles.section}>
-          <SectionHeader title="Certificações" />
-          {certificados.length > 0 ? (
-            <View style={styles.certList}>
-              {certificados.map((c) => (
-                <CertRow key={c} label={c} />
-              ))}
-            </View>
-          ) : (
-            <EmptyHint text="Nenhum certificado cadastrado ainda." />
-          )}
-        </View>
-
-        {/* Projetos */}
-        <View style={styles.section}>
-          <SectionHeader title="Projetos" />
-          {projetosComFoto.length > 0 ? (
             <View style={styles.projetosGrid}>
-              {projetosComFoto.map((uri, i) => (
-                <ProjetoCard key={i} uri={uri} index={i} />
+              {projetos.map(p => (
+                <ProjetoCard
+                  key={p.id}
+                  projeto={p}
+                  onEdit={() => abrirModal(p)}
+                  onDelete={() => confirmarDeletar(p.id)}
+                />
               ))}
             </View>
-          ) : (
-            <EmptyHint text="Nenhum projeto adicionado ainda." />
           )}
-        </View>
 
-      </ScrollView>
+          <View style={styles.saveContainer}>
+            <Button title="Salvar alterações" onPress={handleSalvar} isLoading={isLoading} />
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+
+      <ProjetoModal
+        visible={modalVisible}
+        projeto={projetoEditando}
+        onClose={() => setModalVisible(false)}
+        onSave={salvarProjeto}
+      />
     </SafeAreaView>
   );
 }
@@ -175,185 +440,165 @@ export default function SobreMimScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
-
+  flex: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: {
-    flex: 1,
-    fontSize: 20,
-    fontWeight: '800',
-    color: Colors.text,
-    textAlign: 'center',
-  },
-
-  scroll: { paddingBottom: 48 },
-
-  // Hero
-  heroSection: {
-    alignItems: 'center',
-    paddingVertical: 28,
-    paddingHorizontal: GRID_PADDING,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
     gap: 10,
-  },
-  avatarWrap: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    overflow: 'hidden',
-    backgroundColor: Colors.surfaceHighlight,
-    borderWidth: 2,
-    borderColor: Colors.primary,
-    marginBottom: 4,
-  },
-  avatarImage: { width: 96, height: 96 },
-  avatarPlaceholder: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nome: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: Colors.text,
-    textAlign: 'center',
-  },
-  typeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-  },
-  typeBadgeText: { fontSize: 12, color: Colors.primary, fontWeight: '600' },
-
-  // Seção genérica
-  section: {
-    paddingHorizontal: GRID_PADDING,
-    paddingTop: 24,
-    paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  sectionHeaderRow: { marginBottom: 14 },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
+  backBtn: { alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { flex: 1, fontSize: 20, fontWeight: '800', color: Colors.text },
+  scroll: { padding: GRID_PADDING, paddingBottom: 48 },
+
+  photoSection: { alignItems: 'center', marginBottom: 28 },
+  photoContainer: {
+    width: 120, height: 120, borderRadius: 16,
+    overflow: 'hidden', backgroundColor: Colors.surface,
+    borderWidth: 1.5, borderColor: Colors.border, borderStyle: 'dashed',
+  },
+  photoImage: { width: '100%', height: '100%' },
+  photoPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6 },
+  photoLabel: { fontSize: 14, color: Colors.textSecondary, fontWeight: '500' },
+  cameraOverlay: {
+    position: 'absolute', bottom: 6, right: 6,
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: Colors.primary,
+    alignItems: 'center', justifyContent: 'center',
   },
 
-  // Bio
-  textCard: {
+  sectionLabel: { fontSize: 15, fontWeight: '700', color: Colors.text, marginBottom: 10 },
+
+  sobreContainer: {
+    backgroundColor: Colors.surface, borderRadius: 14,
+    borderWidth: 1.5, borderColor: Colors.border,
+    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8,
+    marginBottom: 28,
+  },
+  sobreInput: { fontSize: 15, color: Colors.text, lineHeight: 22, minHeight: 96 },
+  charCount: { fontSize: 11, color: Colors.textSecondary, textAlign: 'right', marginTop: 4 },
+
+  projetosHeader: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', marginBottom: 14,
+  },
+  addProjetoBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: Colors.surfaceHighlight,
+    borderWidth: 1, borderColor: Colors.primary,
+    borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
+  },
+  addProjetoBtnText: { fontSize: 13, color: Colors.primary, fontWeight: '600' },
+
+  projetosEmpty: {
+    alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: Colors.surface, borderRadius: 14,
+    borderWidth: 1.5, borderColor: Colors.border, borderStyle: 'dashed',
+    paddingVertical: 36, marginBottom: 28,
+  },
+  projetosEmptyText: { fontSize: 14, fontWeight: '600', color: Colors.text },
+  projetosEmptySubtext: { fontSize: 12, color: Colors.textSecondary, textAlign: 'center', paddingHorizontal: 20 },
+
+  projetosGrid: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP, marginBottom: 28,
+  },
+
+  // Card de projeto
+  card: {
+    width: CARD_WIDTH,
     backgroundColor: Colors.surface,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: Colors.border,
-    padding: 16,
-  },
-  bioText: {
-    fontSize: 15,
-    color: Colors.text,
-    lineHeight: 24,
-  },
-
-  // Chips de habilidade
-  chipsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  chip: {
-    backgroundColor: Colors.surfaceHighlight,
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  chipText: {
-    fontSize: 13,
-    color: Colors.primary,
-    fontWeight: '600',
-  },
-
-  // Lista de certificações
-  certList: { gap: 10 },
-  certRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: 12,
-  },
-  certIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: 'rgba(79,110,247,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  certText: {
-    flex: 1,
-    fontSize: 14,
-    color: Colors.text,
-    fontWeight: '500',
-    lineHeight: 20,
-  },
-
-  // Grid de projetos
-  projetosGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: GRID_GAP,
-  },
-  projetoCard: {
-    width: CARD_SIZE,
-    borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
-  projetoImage: {
-    width: CARD_SIZE,
-    height: CARD_SIZE,
+  cardImageContainer: { width: '100%', height: CARD_WIDTH * 0.65 },
+  cardImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+  cardImageEmpty: {
+    width: '100%', height: '100%',
+    backgroundColor: Colors.surfaceHighlight,
+    alignItems: 'center', justifyContent: 'center',
   },
-  projetoLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+  cardBody: { padding: 10, gap: 6 },
+  cardTitulo: { fontSize: 13, fontWeight: '700', color: Colors.text, lineHeight: 18 },
+  stackRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  stackChip: {
+    backgroundColor: Colors.surfaceHighlight,
+    borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3,
   },
-  projetoLabelText: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-    fontWeight: '600',
+  stackChipText: { fontSize: 10, color: Colors.primary, fontWeight: '600' },
+  cardActions: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', marginTop: 4,
   },
+  editBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: Colors.surfaceHighlight,
+    borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5,
+  },
+  editBtnText: { fontSize: 11, color: Colors.primary, fontWeight: '600' },
+  deleteBtn: { padding: 5 },
 
-  // Placeholder de seção vazia
-  emptyHint: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    fontStyle: 'italic',
-    paddingVertical: 4,
+  saveContainer: { marginTop: 8 },
+});
+
+const modal = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: Colors.background },
+  header: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 16, paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: Colors.border,
   },
+  closeBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: Colors.text, textAlign: 'center' },
+  scroll: { padding: 20, paddingBottom: 8, gap: 16 },
+
+  photoArea: {
+    width: '100%', height: 180,
+    borderRadius: 14, overflow: 'hidden',
+    backgroundColor: Colors.surface,
+    borderWidth: 1.5, borderColor: Colors.border,
+    borderStyle: 'dashed',
+  },
+  photoImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+  photoEmpty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
+  photoEmptyText: { fontSize: 13, color: Colors.textSecondary },
+  cameraChip: {
+    position: 'absolute', bottom: 8, right: 8,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: Colors.primary,
+    borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5,
+  },
+  cameraChipText: { fontSize: 12, color: '#fff', fontWeight: '600' },
+
+  label: { fontSize: 14, fontWeight: '600', color: Colors.text },
+  subLabel: { fontSize: 12, color: Colors.textSecondary, fontWeight: '500' },
+
+  inputContainer: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: 12, borderWidth: 1.5, borderColor: Colors.border,
+    paddingHorizontal: 14,
+  },
+  input: { flex: 1, fontSize: 15, color: Colors.text, paddingVertical: 12 },
+  addTagBtn: { padding: 6 },
+
+  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: Colors.surfaceHighlight,
+    borderWidth: 1, borderColor: Colors.primary,
+    borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5,
+  },
+  chipText: { fontSize: 13, color: Colors.primary, fontWeight: '600' },
+  chipSugerida: {
+    backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border,
+    borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5,
+  },
+  chipSugeridaText: { fontSize: 12, color: Colors.textSecondary },
+
+  footer: { padding: 20, borderTopWidth: 1, borderTopColor: Colors.border },
 });
