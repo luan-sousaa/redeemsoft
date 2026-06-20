@@ -77,6 +77,15 @@ function HomeDev() {
       </Animated.View>
 
       <Animated.View entering={FadeInUp.delay(240).duration(350)}>
+        <AcessoCard
+          icon="chatbubbles-outline"
+          title="Mensagens"
+          description="Converse com as empresas dos projetos que você está trabalhando"
+          onPress={() => router.push('/(app)/chat' as Href)}
+        />
+      </Animated.View>
+
+      <Animated.View entering={FadeInUp.delay(320).duration(350)}>
         <View style={styles.tipCard}>
           <Ionicons name="bulb-outline" size={20} color={Colors.primary} />
           <View style={{ flex: 1 }}>
@@ -133,7 +142,16 @@ function HomeEmpresa() {
         />
       </Animated.View>
 
-      <Animated.View entering={FadeInUp.delay(320).duration(350)}>
+      <Animated.View entering={FadeInUp.delay(400).duration(350)}>
+        <AcessoCard
+          icon="chatbubbles-outline"
+          title="Mensagens"
+          description="Converse com os desenvolvedores contratados nos seus projetos"
+          onPress={() => router.push('/(app)/chat' as Href)}
+        />
+      </Animated.View>
+
+      <Animated.View entering={FadeInUp.delay(480).duration(350)}>
         <View style={styles.tipCard}>
           <Ionicons name="bulb-outline" size={20} color={Colors.primary} />
           <View style={{ flex: 1 }}>

@@ -85,7 +85,7 @@ export function DrawerMenu({
     {
       icon: 'chatbubble-outline',
       label: 'Chat',
-      onPress: () => { onClose(); router.push('/(app)/chat-conversa' as Href); },
+      onPress: () => { onClose(); router.push('/(app)/chat' as Href); },
       active: activeScreen === 'chat',
     },
     {
@@ -134,7 +134,7 @@ export function DrawerMenu({
     {
       icon: 'chatbubble-outline',
       label: 'Chat',
-      onPress: () => { onClose(); router.push('/(app)/chat-conversa' as Href); },
+      onPress: () => { onClose(); router.push('/(app)/chat' as Href); },
       active: activeScreen === 'chat',
     },
     {
