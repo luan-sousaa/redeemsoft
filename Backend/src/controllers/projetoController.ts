@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { db } from '../db/db';
-import { novoProjeto, cliente, usuario, aplicacao, desenvolvedor } from '../db/schema';
+import { novoProjeto, cliente, usuario, aplicacao, desenvolvedor, notificacao } from '../db/schema';
 import { eq } from 'drizzle-orm';
 
 async function buildProjetosFormatados(projetos: typeof novoProjeto.$inferSelect[]) {
@@ -93,12 +93,28 @@ export const criarProjeto = async (req: Request, res: Response) => {
       })
       .returning();
 
+    // Notifica todos os devs sobre o novo projeto (non-fatal)
+    notificarDevsNovoProjeto(titulo, novo.idProjeto).catch(() => {});
+
     return res.status(201).json(novo);
   } catch (error) {
     console.error('ERRO AO SALVAR PROJETO:', error);
     return res.status(500).json({ mensagem: 'Erro ao criar projeto.', erroReal: String(error) });
   }
 };
+
+async function notificarDevsNovoProjeto(tituloProjeto: string, idProjeto: number) {
+  const devs = await db.select({ idUsuario: desenvolvedor.idUsuario }).from(desenvolvedor);
+  if (devs.length === 0) return;
+  await db.insert(notificacao).values(
+    devs.map((d) => ({
+      idUsuario: d.idUsuario,
+      tipo: 'novo_projeto',
+      titulo: 'Novo projeto disponível',
+      corpo: `"${tituloProjeto}" foi publicado no marketplace. Confira!`,
+    }))
+  );
+}
 
 export const atualizarProjeto = async (req: Request, res: Response) => {
   const { id } = req.params;

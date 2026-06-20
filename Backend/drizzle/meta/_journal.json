@@ -36,6 +36,13 @@
       "when": 1780963200000,
       "tag": "0004_dev_foto",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1750380000000,
+      "tag": "0005_notificacoes",
+      "breakpoints": true
     }
   ]
 }

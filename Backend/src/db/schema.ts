@@ -116,3 +116,15 @@ export const mensagem = sqliteTable("mensagem", {
   texto:     text("texto").notNull(),
   criadoEm:  text("criadoEm").notNull().default(sql`(datetime('now'))`),
 });
+
+// ─── Notificação ─────────────────────────────────────────────────────────────
+export const notificacao = sqliteTable("notificacao", {
+  idNotificacao: integer("id").primaryKey({ autoIncrement: true }).notNull(),
+  idUsuario: integer("idUsuario").notNull()
+    .references(() => usuario.idUsuario),
+  tipo: text("tipo").notNull(), // nova_candidatura | candidatura_aceita | candidatura_recusada | novo_projeto
+  titulo: text("titulo").notNull(),
+  corpo: text("corpo").notNull(),
+  lida: integer("lida").notNull().default(0),
+  criadoEm: text("criadoEm").notNull().default(sql`(datetime('now'))`),
+});

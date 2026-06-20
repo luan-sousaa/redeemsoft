@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { db } from '../db/db';
-import { aplicacao, novoProjeto } from '../db/schema';
+import { aplicacao, novoProjeto, notificacao, cliente, desenvolvedor, usuario } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
 
 export const criarCandidatura = async (req: Request, res: Response) => {
@@ -29,11 +29,43 @@ export const criarCandidatura = async (req: Request, res: Response) => {
       .values({ idDev, idProjeto, proposta, status: 'pendente' })
       .returning();
 
+    // Notifica a empresa sobre nova candidatura (non-fatal)
+    notificarEmpresa(idDev, idProjeto).catch(() => {});
+
     return res.status(201).json(nova);
   } catch {
     return res.status(500).json({ mensagem: 'Erro ao criar candidatura.' });
   }
 };
+
+async function notificarEmpresa(idDev: number, idProjeto: number) {
+  const [projetoInfo] = await db
+    .select({ idCliente: novoProjeto.idCliente })
+    .from(novoProjeto)
+    .where(eq(novoProjeto.idProjeto, idProjeto));
+
+  if (!projetoInfo) return;
+
+  const [clienteInfo] = await db
+    .select({ idUsuario: cliente.idUsuario })
+    .from(cliente)
+    .where(eq(cliente.idCliente, projetoInfo.idCliente));
+
+  const [devInfo] = await db
+    .select({ nome: usuario.nome })
+    .from(desenvolvedor)
+    .innerJoin(usuario, eq(desenvolvedor.idUsuario, usuario.idUsuario))
+    .where(eq(desenvolvedor.idDev, idDev));
+
+  if (!clienteInfo) return;
+
+  await db.insert(notificacao).values({
+    idUsuario: clienteInfo.idUsuario,
+    tipo: 'nova_candidatura',
+    titulo: 'Nova candidatura recebida',
+    corpo: `${devInfo?.nome ?? 'Um desenvolvedor'} se candidatou ao seu projeto.`,
+  });
+}
 
 export const buscarMinhasCandidaturas = async (req: Request, res: Response) => {
   const idDev = req.user?.idDev;
@@ -97,9 +129,8 @@ export const atualizarStatusCandidatura = async (req: Request, res: Response) =>
   }
 
   try {
-    // Verifica que o projeto pertence ao cliente autenticado
     const [projeto] = await db
-      .select({ idCliente: novoProjeto.idCliente })
+      .select({ idCliente: novoProjeto.idCliente, titulo: novoProjeto.titulo })
       .from(novoProjeto)
       .where(eq(novoProjeto.idProjeto, projetoId));
 
@@ -114,8 +145,32 @@ export const atualizarStatusCandidatura = async (req: Request, res: Response) =>
       .returning();
 
     if (!atualizada) return res.status(404).json({ mensagem: 'Candidatura não encontrada.' });
+
+    // Notifica o dev sobre o novo status (non-fatal)
+    if (status === 'aceito' || status === 'recusado') {
+      notificarDev(atualizada.idDev, projeto.titulo, status).catch(() => {});
+    }
+
     return res.status(200).json(atualizada);
   } catch {
     return res.status(500).json({ mensagem: 'Erro ao atualizar status.' });
   }
 };
+
+async function notificarDev(idDev: number, tituloProjeto: string, status: 'aceito' | 'recusado') {
+  const [devInfo] = await db
+    .select({ idUsuario: desenvolvedor.idUsuario })
+    .from(desenvolvedor)
+    .where(eq(desenvolvedor.idDev, idDev));
+
+  if (!devInfo) return;
+
+  await db.insert(notificacao).values({
+    idUsuario: devInfo.idUsuario,
+    tipo: status === 'aceito' ? 'candidatura_aceita' : 'candidatura_recusada',
+    titulo: status === 'aceito' ? 'Candidatura aceita!' : 'Candidatura recusada',
+    corpo: status === 'aceito'
+      ? `Sua candidatura para "${tituloProjeto}" foi aceita. Aguarde o contato da empresa.`
+      : `Sua candidatura para "${tituloProjeto}" não foi selecionada desta vez.`,
+  });
+}

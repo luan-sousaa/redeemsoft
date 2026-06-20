@@ -115,6 +115,7 @@ export default function EditarPerfilScreen() {
   const { profile, isLoading: isProfileLoading, updateProfile } = useProfile();
 
   const [sobre, setSobre] = useState(() => profile.sobreMim);
+  const [precoPorHora, setPrecoPorHora] = useState(() => String(profile.precoPorHora ?? ''));
   const [fotoUri, setFotoUri] = useState<string | null>(() => profile.fotoUri ?? profile.foto);
   const [fotoBase64, setFotoBase64] = useState<string | null>(() => profile.foto ?? null);
   const [projetoFotos, setProjetoFotos] = useState<(string | null)[]>(() =>
@@ -127,6 +128,7 @@ export default function EditarPerfilScreen() {
     if (!hasInitialized.current && !isProfileLoading) {
       hasInitialized.current = true;
       setSobre(profile.sobreMim);
+      setPrecoPorHora(String(profile.precoPorHora ?? ''));
       setFotoUri(profile.fotoUri ?? profile.foto);
       setFotoBase64(profile.foto ?? null);
       setProjetoFotos(profile.projetoFotos.length === 4 ? [...profile.projetoFotos] : [null, null, null, null]);
@@ -156,7 +158,8 @@ export default function EditarPerfilScreen() {
   async function handleSalvar() {
     setIsSaving(true);
     try {
-      await updateProfile({ sobreMim: sobre, fotoUri, foto: fotoBase64, projetoFotos });
+      const preco = parseFloat(precoPorHora.replace(',', '.'));
+      await updateProfile({ sobreMim: sobre, fotoUri, foto: fotoBase64, projetoFotos, precoPorHora: isNaN(preco) ? 0 : preco });
       Toast.show({
         type: 'success',
         text1: 'Perfil atualizado com sucesso!',
@@ -207,12 +210,30 @@ export default function EditarPerfilScreen() {
             </Pressable>
           </View>
 
+          {/* Preço por hora */}
+          <View style={styles.precoContainer}>
+            <Text style={styles.precoLabel}>Preço por hora (R$)</Text>
+            <View style={styles.precoInputRow}>
+              <Text style={styles.precoPrefix}>R$</Text>
+              <TextInput
+                style={styles.precoInput}
+                value={precoPorHora}
+                onChangeText={setPrecoPorHora}
+                placeholder="0"
+                placeholderTextColor={Colors.textSecondary}
+                keyboardType="decimal-pad"
+                selectionColor={Colors.primary}
+              />
+              <Text style={styles.precoSuffix}>/h</Text>
+            </View>
+          </View>
+
           {/* Sobre */}
           <View style={styles.sobreContainer}>
             <TextInput
               style={styles.sobreInput}
               value={sobre}
-              onChangeText={setSobre}
+              onChangeText={(t) => setSobre(t.slice(0, 500))}
               placeholder="Sobre mim:"
               placeholderTextColor={Colors.textSecondary}
               multiline
@@ -220,6 +241,9 @@ export default function EditarPerfilScreen() {
               textAlignVertical="top"
               selectionColor={Colors.primary}
             />
+            <Text style={[styles.charCounter, sobre.length >= 480 && styles.charCounterWarn]}>
+              {sobre.length}/500
+            </Text>
           </View>
 
           {/* Projetos */}
@@ -281,6 +305,32 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
+  precoContainer: {
+    marginBottom: 20,
+  },
+  precoLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  precoInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 6,
+  },
+  precoPrefix: { fontSize: 16, fontWeight: '700', color: Colors.textSecondary },
+  precoInput: { flex: 1, fontSize: 18, fontWeight: '700', color: Colors.text, paddingVertical: 0 },
+  precoSuffix: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
+
   sobreContainer: {
     backgroundColor: Colors.surface,
     borderRadius: 14,
@@ -292,6 +342,8 @@ const styles = StyleSheet.create({
     minHeight: 120,
   },
   sobreInput: { fontSize: 15, color: Colors.text, lineHeight: 22, minHeight: 96 },
+  charCounter: { fontSize: 11, color: Colors.textSecondary, textAlign: 'right', marginTop: 6 },
+  charCounterWarn: { color: Colors.error },
 
   projetosLabel: { fontSize: 15, fontWeight: '600', color: Colors.text, marginBottom: 12 },
   projetosGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP, marginBottom: 32 },

@@ -96,6 +96,15 @@ export type Mensagem = {
   criadoEm: string;
 };
 
+export type Notificacao = {
+  id: number;
+  tipo: string;
+  titulo: string;
+  corpo: string;
+  lida: boolean;
+  criadoEm: string;
+};
+
 export type MinhaCandidatura = {
   candidaturaId: string;
   projetoId: string;
@@ -308,6 +317,26 @@ export const authService = {
   async getMensagens(contratoId: string | number): Promise<Mensagem[]> {
     const data = await api.get<any[]>(`/contrato/${contratoId}/mensagens`);
     return data.map((m) => ({ ...m, id: m.idMensagem }));
+  },
+
+  async getNotificacoes(): Promise<Notificacao[]> {
+    const data = await api.get<any[]>('/notificacoes');
+    return data.map((n) => ({
+      id: n.id,
+      tipo: n.tipo,
+      titulo: n.titulo,
+      corpo: n.corpo,
+      lida: n.lida === 1,
+      criadoEm: n.criadoEm,
+    }));
+  },
+
+  async marcarNotificacaoLida(id: number): Promise<void> {
+    await api.patch(`/notificacoes/${id}/lida`, {});
+  },
+
+  async marcarTodasNotificacoesLidas(): Promise<void> {
+    await api.patch('/notificacoes/lidas', {});
   },
 
   async getMinhaCandidaturas(): Promise<MinhaCandidatura[]> {

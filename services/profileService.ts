@@ -14,12 +14,13 @@ export type DevProfile = {
   fotoUri: string | null;
   foto: string | null;
   projetoFotos: (string | null)[];
+  precoPorHora?: number;
 };
 
 // Cache local para refletir edições antes de novo fetch
 let cache: DevProfile | null = null;
 
-const EMPTY: DevProfile = { sobreMim: '', habilidades: [], certificados: [], fotoUri: null, foto: null, projetoFotos: [null, null, null, null] };
+const EMPTY: DevProfile = { sobreMim: '', habilidades: [], certificados: [], fotoUri: null, foto: null, projetoFotos: [null, null, null, null], precoPorHora: 0 };
 
 function serializeList(list: string[]): string {
   return JSON.stringify(list);
@@ -38,6 +39,7 @@ export const profileService = {
         fotoUri: data.foto ?? null,
         foto: data.foto ?? null,
         projetoFotos: [null, null, null, null],
+        precoPorHora: data.precoPorHora ?? 0,
       };
     } catch (err) {
       console.warn('[profileService] Falha ao buscar perfil da API:', err);
@@ -56,6 +58,7 @@ export const profileService = {
       habilidades: serializeList(ensureArray(cache.habilidades)),
       certificacoes: serializeList(ensureArray(cache.certificados)),
       experiencia: cache.sobreMim,
+      ...(cache.precoPorHora !== undefined ? { precoPorHora: cache.precoPorHora } : {}),
       // Só envia foto quando foi explicitamente passada no update — evita sobrescrever com null
       ...(data.foto !== undefined ? { foto: data.foto } : {}),
     });

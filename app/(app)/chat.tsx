@@ -33,7 +33,20 @@ import { authService, type Contrato, type Mensagem } from '@/services/authServic
 function formatHora(iso: string): string {
   try {
     const d = new Date(iso);
-    return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const agora = new Date();
+    const diffMin = Math.floor((agora.getTime() - d.getTime()) / 60000);
+
+    if (diffMin < 1) return 'Agora';
+    if (diffMin < 60) return `há ${diffMin} min`;
+
+    const hora = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const hoje = agora.toDateString();
+    const ontem = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() - 1).toDateString();
+
+    if (d.toDateString() === hoje) return hora;
+    if (d.toDateString() === ontem) return `Ontem ${hora}`;
+
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
   } catch {
     return '';
   }

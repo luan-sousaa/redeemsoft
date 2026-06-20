@@ -8,6 +8,7 @@ import devRoutes from './src/routes/devRoutes.js';
 import candidaturaRoutes from './src/routes/candidaturaRoutes.js';
 import clienteRoutes from './src/routes/clienteRoutes.js';
 import contratoRoutes from './src/routes/contratoRoutes.js';
+import notificacaoRoutes from './src/routes/notificacaoRoutes.js';
 
 const app = express();
 const PORT = Number(process.env['PORT']) || 3000;
@@ -23,6 +24,7 @@ app.use('/', devRoutes);
 app.use('/', candidaturaRoutes);
 app.use('/', clienteRoutes);
 app.use('/', contratoRoutes);
+app.use('/', notificacaoRoutes);
 
 (async () => {
   try {

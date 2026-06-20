@@ -5,9 +5,11 @@ import type { Href } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Modal,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -28,6 +30,13 @@ const STATUS_CONFIG = {
   em_andamento: { label: 'Em andamento', color: '#F5A623', icon: 'construct-outline' as const },
   concluido: { label: 'Concluído', color: '#4CAF50', icon: 'checkmark-circle-outline' as const },
 };
+
+const AVATAR_COLORS = ['#4F6EF7', '#E84560', '#F5A623', '#4CAF50', '#9C27B0', '#00BCD4'];
+function nameToColor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
 
 const CAND_STATUS_CONFIG = {
   pendente: { label: 'Pendente', color: Colors.textSecondary, bg: Colors.surfaceHighlight },
@@ -67,35 +76,46 @@ function CandidatosModal({
   const devMap = Object.fromEntries(desenvolvedores.map((d) => [d.id, d]));
 
   function handleStatus(cand: Candidatura, status: 'aceito' | 'recusado') {
-    setLoadingId(cand.id);
-
     if (status === 'aceito') {
-      // Sem API call aqui — o contrato/status são criados no fluxo de pagamento
+      setLoadingId(cand.id);
       onContratar({
         devId:       String(cand.desenvolvedorId),
         candidaturaId: String(cand.id),
         projetoId:   String(projeto.id),
         projetoNome: projeto.titulo,
-        // proposta em BRL → converte para centavos
         valorProjeto: String(Math.round((cand.proposta || projeto.orcamento) * 100)),
       });
       setLoadingId(null);
       return;
     }
 
-    // status === 'recusado': ainda chama a API
+    // Confirmação antes de recusar
     const dev = devMap[cand.desenvolvedorId];
-    authService.atualizarStatusCandidatura(projeto.id, cand.id, 'recusado')
-      .then(() => {
-        Toast.show({
-          type: 'success',
-          text1: 'Candidato recusado',
-          text2: `${dev?.nome ?? 'Desenvolvedor'} foi recusado com sucesso.`,
-        });
-        onUpdate();
-      })
-      .catch(() => Toast.show({ type: 'error', text1: 'Erro', text2: 'Tente novamente.' }))
-      .finally(() => setLoadingId(null));
+    Alert.alert(
+      'Recusar candidatura',
+      `Tem certeza que deseja recusar ${dev?.nome ?? 'este candidato'}?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Recusar',
+          style: 'destructive',
+          onPress: () => {
+            setLoadingId(cand.id);
+            authService.atualizarStatusCandidatura(projeto.id, cand.id, 'recusado')
+              .then(() => {
+                Toast.show({
+                  type: 'success',
+                  text1: 'Candidato recusado',
+                  text2: `${dev?.nome ?? 'Desenvolvedor'} foi recusado com sucesso.`,
+                });
+                onUpdate();
+              })
+              .catch(() => Toast.show({ type: 'error', text1: 'Erro', text2: 'Tente novamente.' }))
+              .finally(() => setLoadingId(null));
+          },
+        },
+      ]
+    );
   }
 
   return (
@@ -135,7 +155,7 @@ function CandidatosModal({
                     onPress={() => onVerDev(String(cand.desenvolvedorId))}
                   >
                     <View style={modal.cardHeader}>
-                      <View style={modal.avatar}>
+                      <View style={[modal.avatar, { backgroundColor: nameToColor(dev?.nome ?? '?') }]}>
                         {cand.foto ? (
                           <Image
                             source={{ uri: cand.foto }}
@@ -143,7 +163,7 @@ function CandidatosModal({
                             contentFit="cover"
                           />
                         ) : (
-                          <Text style={modal.avatarLetter}>{dev?.nome.charAt(0) ?? '?'}</Text>
+                          <Text style={modal.avatarLetter}>{(dev?.nome ?? '?').charAt(0).toUpperCase()}</Text>
                         )}
                       </View>
                       <View style={{ flex: 1 }}>
@@ -282,6 +302,7 @@ export default function MeusProjetosScreen() {
   const [projetos, setProjetos] = useState<ProjetoEmpresa[]>([]);
   const [desenvolvedores, setDesenvolvedores] = useState<Desenvolvedor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [projetoSelecionado, setProjetoSelecionado] = useState<ProjetoEmpresa | null>(null);
   // Guard: impede múltiplos router.push caso o usuário toque rápido
   const navegandoRef = React.useRef(false);
@@ -301,6 +322,12 @@ export default function MeusProjetosScreen() {
       setIsLoading(false);
     }
   }, []);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await carregar();
+    setRefreshing(false);
+  }, [carregar]);
 
   useEffect(() => { carregar(); }, [carregar, user]);
 
@@ -354,6 +381,7 @@ export default function MeusProjetosScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.lista}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.primary} />}
           ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
@@ -557,11 +585,11 @@ const modal = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
-  avatarLetter: { fontSize: 18, fontWeight: '800', color: Colors.white },
+  avatarLetter: { fontSize: 18, fontWeight: '800', color: Colors.text },
   candName: { fontSize: 14, fontWeight: '700', color: Colors.text },
   candEmail: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
   statusBadge: {

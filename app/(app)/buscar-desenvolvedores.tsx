@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
   Pressable,
+  RefreshControl,
   StyleSheet,
   Text,
   TextInput,
@@ -86,43 +87,47 @@ function DevCard({
 export default function BuscarDesenvolvedoresScreen() {
   const router = useRouter();
   const [devs, setDevs] = useState<Desenvolvedor[]>([]);
-  const [filtrado, setFiltrado] = useState<Desenvolvedor[]>([]);
   const [busca, setBusca] = useState('');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [ordem, setOrdem] = useState<'asc' | 'desc' | null>(null);
 
- useEffect(() => {
-  authService.getDesenvolvedores()
-    .then((data) => {
+  const carregar = useCallback(async () => {
+    try {
+      const data = await authService.getDesenvolvedores();
       setDevs(data);
-      setFiltrado(data);
-    })
-    .catch((error) => {
-      console.error("Erro ao buscar desenvolvedores:", error);
-    })
-    .finally(() => {
-      setLoading(false); 
-    });
-}, []);
+    } catch (error) {
+      console.error('Erro ao buscar desenvolvedores:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const handleBusca = useCallback(
-    (text: string) => {
-      setBusca(text);
-      if (!text.trim()) {
-        setFiltrado(devs);
-        return;
-      }
-      const q = text.toLowerCase();
-      setFiltrado(
-      devs.filter(
+  useEffect(() => { carregar(); }, [carregar]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await carregar();
+    setRefreshing(false);
+  }, [carregar]);
+
+  const handleBusca = useCallback((text: string) => setBusca(text), []);
+
+  const filtrado = useMemo(() => {
+    let lista = devs;
+    if (busca.trim()) {
+      const q = busca.toLowerCase();
+      lista = lista.filter(
         (d) =>
           (d.nome || '').toLowerCase().includes(q) ||
           (d.habilidades || '').toLowerCase().includes(q) ||
           (d.descricao || '').toLowerCase().includes(q)
-      )
-    );
-    },
-    [devs]
-  );
+      );
+    }
+    if (ordem === 'asc') return [...lista].sort((a, b) => a.precoPorHora - b.precoPorHora);
+    if (ordem === 'desc') return [...lista].sort((a, b) => b.precoPorHora - a.precoPorHora);
+    return lista;
+  }, [devs, busca, ordem]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -152,6 +157,25 @@ export default function BuscarDesenvolvedoresScreen() {
         )}
       </View>
 
+      {/* Ordenar */}
+      <View style={styles.sortRow}>
+        <Text style={styles.sortLabel}>Ordenar por preço:</Text>
+        <Pressable
+          style={[styles.sortChip, ordem === 'asc' && styles.sortChipActive]}
+          onPress={() => setOrdem((o) => (o === 'asc' ? null : 'asc'))}
+        >
+          <Ionicons name="arrow-up-outline" size={12} color={ordem === 'asc' ? Colors.text : Colors.textSecondary} />
+          <Text style={[styles.sortChipText, ordem === 'asc' && styles.sortChipTextActive]}>Menor</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.sortChip, ordem === 'desc' && styles.sortChipActive]}
+          onPress={() => setOrdem((o) => (o === 'desc' ? null : 'desc'))}
+        >
+          <Ionicons name="arrow-down-outline" size={12} color={ordem === 'desc' ? Colors.text : Colors.textSecondary} />
+          <Text style={[styles.sortChipText, ordem === 'desc' && styles.sortChipTextActive]}>Maior</Text>
+        </Pressable>
+      </View>
+
       {/* Label */}
       <Text style={styles.label}>
         Desenvolvedores:{filtrado.length > 0 ? ` ${filtrado.length} disponíveis` : ''}
@@ -169,6 +193,7 @@ export default function BuscarDesenvolvedoresScreen() {
         <FlatList
           data={filtrado}
           keyExtractor={(item) => item.id}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.primary} />}
           renderItem={({ item }) => (
             <DevCard
               dev={item}
@@ -318,6 +343,42 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontSize: 11,
     fontWeight: '500',
+  },
+  // Ordenar
+  sortRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 20,
+    marginBottom: 10,
+  },
+  sortLabel: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    flex: 1,
+  },
+  sortChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.surfaceHighlight,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  sortChipActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  sortChipText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+  },
+  sortChipTextActive: {
+    color: Colors.text,
   },
   // Botão inferior
   criarBtn: {
