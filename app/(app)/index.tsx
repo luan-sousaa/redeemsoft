@@ -105,9 +105,18 @@ function HomeDev() {
 function HomeEmpresa() {
   const router = useRouter();
   return (
-    
+
     <>
-      <Animated.View entering={FadeInUp.delay(0).duration(350)}>
+      {/* Banner hero para empresa */}
+      <Animated.View entering={FadeInUp.delay(0).duration(400)}>
+        <Image
+          source={require('@/assets/images/banner-empresa.jpg')}
+          style={styles.bannerEmpresa}
+          contentFit="cover"
+        />
+      </Animated.View>
+
+      <Animated.View entering={FadeInUp.delay(80).duration(350)}>
         <View style={styles.sectionHeader}>
           <Ionicons name="flash-outline" size={16} color={Colors.primary} />
           <Text style={styles.sectionTitle}>Acesso rápido</Text>
@@ -332,4 +341,12 @@ const styles = StyleSheet.create({
   },
   tipTitle: { fontSize: 13, fontWeight: '700', color: Colors.text, marginBottom: 6 },
   tipText: { fontSize: 13, color: Colors.textSecondary, lineHeight: 20 },
+
+  bannerEmpresa: {
+    width: '100%',
+    aspectRatio: 2.4,
+    borderRadius: 16,
+    marginBottom: 12,
+    overflow: 'hidden',
+  },
 });
