@@ -344,9 +344,8 @@ const styles = StyleSheet.create({
 
   bannerEmpresa: {
     width: '100%',
-    aspectRatio: 2.4,
+    aspectRatio: 2400 / 1792,
     borderRadius: 16,
     marginBottom: 12,
-    overflow: 'hidden',
   },
 });
