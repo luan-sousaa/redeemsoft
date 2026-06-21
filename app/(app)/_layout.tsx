@@ -26,7 +26,6 @@ export default function AppLayout() {
       <Stack.Screen name="buscar-desenvolvedores" />
       <Stack.Screen name="marketplace" />
       <Stack.Screen name="minhas-candidaturas" />
-      <Stack.Screen name="chat" />
     </Stack>
   );
 }

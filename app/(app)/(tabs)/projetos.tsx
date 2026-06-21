@@ -79,7 +79,10 @@ function ProjetoCard({ projeto, onPress }: { projeto: ProjetoEmpresa; onPress: (
       </View>
       <Text style={styles.cardDesc} numberOfLines={2}>{projeto.descricao}</Text>
       <View style={styles.cardRow}>
-        {projeto.stack?.slice(0, 3).map((s, i) => (
+        {(typeof projeto.stack === 'string'
+          ? projeto.stack.split(',').map(s => s.trim()).filter(Boolean)
+          : (projeto.stack ?? [])
+        ).slice(0, 3).map((s, i) => (
           <View key={i} style={[styles.chip, { borderColor: Colors.border, backgroundColor: Colors.surfaceHighlight }]}>
             <Text style={[styles.chipText, { color: Colors.textSecondary }]}>{s}</Text>
           </View>
