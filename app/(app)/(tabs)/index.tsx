@@ -153,7 +153,7 @@ function HomeEmpresa() {
       <Image
         source={require('@/assets/images/banner-empresa.jpg')}
         style={styles.banner}
-        contentFit="cover"
+        contentFit="contain"
       />
 
       <Text style={styles.sectionLabel}>
@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
 
   banner: {
     width: '80%',
-    aspectRatio: 2.4,
+    aspectRatio: 2400 / 1792, // proporção real da imagem
     borderRadius: 28,
     alignSelf: 'center',
     marginVertical: 12,
