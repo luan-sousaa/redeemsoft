@@ -23,6 +23,7 @@ export default function TabsLayout() {
         },
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.textSecondary,
+        tabBarLabelPosition: 'below-icon',
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
       }}
     >
