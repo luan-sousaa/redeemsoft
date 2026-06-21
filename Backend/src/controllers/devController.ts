@@ -171,7 +171,10 @@ export const buscarConversas = async (req: Request, res: Response) => {
         .leftJoin(contrato, eq(contrato.candidaturaId, aplicacao.idAplicacao))
         .where(and(eq(aplicacao.idDev, idDev), eq(aplicacao.status, 'aceito')));
 
-      return res.status(200).json(conversas.map(c => ({
+      // Deduplica por candidaturaId — LEFT JOIN pode gerar linhas extras
+      const seen = new Set<number>();
+      const unicas = conversas.filter(c => seen.has(c.candidaturaId) ? false : (seen.add(c.candidaturaId), true));
+      return res.status(200).json(unicas.map(c => ({
         id: String(c.candidaturaId),
         nomeContato: c.empresaNome,
         fotoContato: null,
@@ -199,7 +202,9 @@ export const buscarConversas = async (req: Request, res: Response) => {
         .leftJoin(contrato, eq(contrato.candidaturaId, aplicacao.idAplicacao))
         .where(and(eq(novoProjeto.idCliente, idCliente), eq(aplicacao.status, 'aceito')));
 
-      return res.status(200).json(conversas.map(c => ({
+      const seen2 = new Set<number>();
+      const unicas2 = conversas.filter(c => seen2.has(c.candidaturaId) ? false : (seen2.add(c.candidaturaId), true));
+      return res.status(200).json(unicas2.map(c => ({
         id: String(c.candidaturaId),
         nomeContato: c.devNome,
         fotoContato: c.devFoto,
