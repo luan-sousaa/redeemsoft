@@ -112,7 +112,7 @@ function HomeEmpresa() {
         <Image
           source={require('@/assets/images/banner-empresa.jpg')}
           style={styles.bannerEmpresa}
-          contentFit="cover"
+          contentFit="contain"
         />
       </Animated.View>
 
@@ -343,9 +343,10 @@ const styles = StyleSheet.create({
   tipText: { fontSize: 13, color: Colors.textSecondary, lineHeight: 20 },
 
   bannerEmpresa: {
-    width: '100%',
+    width: '80%',
     aspectRatio: 2400 / 1792,
-    borderRadius: 16,
-    marginBottom: 12,
+    borderRadius: 28,
+    marginBottom: 20,
+    alignSelf: 'center',
   },
 });
