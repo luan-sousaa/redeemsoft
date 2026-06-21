@@ -1,14 +1,13 @@
+/**
+ * Aba "Perfil" — hub de navegação que substitui o DrawerMenu
+ * Mostra avatar, nome, e links para: editar perfil, notificações, configurações, sair
+ */
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useRouter, type Href } from 'expo-router';
+import { useRouter } from 'expo-router';
+import type { Href } from 'expo-router';
 import React from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors } from '@/constants/colors';
@@ -18,41 +17,97 @@ import { useProfile } from '@/contexts/ProfileContext';
 type MenuItem = {
   icon: React.ComponentProps<typeof Ionicons>['name'];
   label: string;
-  href: Href;
-  color?: string;
+  onPress: () => void;
+  danger?: boolean;
 };
+
+function MenuRow({ item }: { item: MenuItem }) {
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.menuRow, pressed && styles.menuRowPressed]}
+      onPress={item.onPress}
+    >
+      <View style={[styles.menuIcon, item.danger && styles.menuIconDanger]}>
+        <Ionicons
+          name={item.icon}
+          size={20}
+          color={item.danger ? Colors.error : Colors.primary}
+        />
+      </View>
+      <Text style={[styles.menuLabel, item.danger && styles.menuLabelDanger]}>
+        {item.label}
+      </Text>
+      {!item.danger && (
+        <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
+      )}
+    </Pressable>
+  );
+}
 
 export default function PerfilTab() {
   const router = useRouter();
   const { user, logout } = useAuth();
   const { profile } = useProfile();
 
-  const isDev = user?.type === 'developer';
-  const avatarLetter = user?.name?.charAt(0).toUpperCase() ?? '?';
+  const isEmpresa = user?.type === 'client';
   const avatarUri = profile.fotoUri;
+  const avatarLetter = user?.name?.charAt(0).toUpperCase() ?? '?';
+  const typeLabel = isEmpresa ? 'Empresa' : 'Desenvolvedor';
 
-  const menuDev: MenuItem[] = [
-    { icon: 'person-outline',       label: 'Sobre mim & Projetos',   href: '/(app)/sobre-mim' as Href },
-    { icon: 'build-outline',        label: 'Habilidades',             href: '/(app)/editar-habilidades' as Href },
-    { icon: 'ribbon-outline',       label: 'Certificados',            href: '/(app)/editar-certificados' as Href },
-    { icon: 'create-outline',       label: 'Editar Perfil',           href: '/(app)/editar-perfil' as Href },
-    { icon: 'settings-outline',     label: 'Configurações',           href: '/(app)/configuracoes' as Href },
-    { icon: 'notifications-outline',label: 'Notificações',            href: '/(app)/notificacoes' as Href },
-  ];
+  const menuItens: MenuItem[] = isEmpresa
+    ? [
+        {
+          icon: 'business-outline',
+          label: 'Meu Perfil Empresa',
+          onPress: () => router.push('/(app)/perfil-empresa' as Href),
+        },
+        {
+          icon: 'folder-open-outline',
+          label: 'Minhas Solicitações',
+          onPress: () => router.push('/(app)/meus-projetos' as Href),
+        },
+        {
+          icon: 'notifications-outline',
+          label: 'Notificações',
+          onPress: () => router.push('/(app)/notificacoes' as Href),
+        },
+        {
+          icon: 'settings-outline',
+          label: 'Configurações',
+          onPress: () => router.push('/(app)/configuracoes-empresa' as Href),
+        },
+      ]
+    : [
+        {
+          icon: 'person-outline',
+          label: 'Meu Perfil',
+          onPress: () => router.push('/(app)/sobre-mim' as Href),
+        },
+        {
+          icon: 'notifications-outline',
+          label: 'Notificações',
+          onPress: () => router.push('/(app)/notificacoes' as Href),
+        },
+        {
+          icon: 'settings-outline',
+          label: 'Configurações',
+          onPress: () => router.push('/(app)/configuracoes' as Href),
+        },
+      ];
 
-  const menuEmpresa: MenuItem[] = [
-    { icon: 'business-outline',     label: 'Perfil da Empresa',      href: '/(app)/perfil-empresa' as Href },
-    { icon: 'settings-outline',     label: 'Configurações',          href: '/(app)/configuracoes-empresa' as Href },
-    { icon: 'notifications-outline',label: 'Notificações',           href: '/(app)/notificacoes' as Href },
-  ];
-
-  const menu = isDev ? menuDev : menuEmpresa;
+  const sairItem: MenuItem = {
+    icon: 'log-out-outline',
+    label: 'Sair da conta',
+    onPress: logout,
+    danger: true,
+  };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Avatar + nome */}
-        <View style={styles.heroSection}>
+
+        {/* Cabeçalho com avatar */}
+        <View style={styles.profileHeader}>
           <View style={styles.avatarWrap}>
             {avatarUri ? (
               <Image source={{ uri: avatarUri }} style={styles.avatarImg} contentFit="cover" />
@@ -60,42 +115,37 @@ export default function PerfilTab() {
               <Text style={styles.avatarLetter}>{avatarLetter}</Text>
             )}
           </View>
-          <Text style={styles.nome}>{user?.name}</Text>
-          <View style={styles.typeBadge}>
+          <Text style={styles.userName}>{user?.name}</Text>
+          <View style={[styles.typeBadge, isEmpresa && styles.typeBadgeEmpresa]}>
             <Ionicons
-              name={isDev ? 'code-slash-outline' : 'business-outline'}
+              name={isEmpresa ? 'business-outline' : 'code-slash-outline'}
               size={12}
-              color={Colors.primary}
+              color={isEmpresa ? '#F5A623' : Colors.primary}
             />
-            <Text style={styles.typeBadgeText}>{isDev ? 'Desenvolvedor' : 'Empresa'}</Text>
+            <Text style={[styles.typeBadgeText, isEmpresa && styles.typeBadgeTextEmpresa]}>
+              {typeLabel}
+            </Text>
           </View>
-          <Text style={styles.email}>{user?.email}</Text>
+          <Text style={styles.userEmail}>{user?.email}</Text>
         </View>
 
-        {/* Menu */}
+        {/* Menu de opções */}
         <View style={styles.menuSection}>
-          {menu.map(item => (
-            <Pressable
-              key={item.label}
-              style={styles.menuItem}
-              onPress={() => router.push(item.href)}
-            >
-              <View style={styles.menuIcon}>
-                <Ionicons name={item.icon} size={20} color={item.color ?? Colors.primary} />
-              </View>
-              <Text style={[styles.menuLabel, item.color ? { color: item.color } : null]}>
-                {item.label}
-              </Text>
-              <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
-            </Pressable>
+          {menuItens.map((item, i) => (
+            <View key={i}>
+              <MenuRow item={item} />
+              {i < menuItens.length - 1 && <View style={styles.divider} />}
+            </View>
           ))}
         </View>
 
         {/* Sair */}
-        <Pressable style={styles.logoutBtn} onPress={logout}>
-          <Ionicons name="log-out-outline" size={20} color={Colors.error} />
-          <Text style={styles.logoutText}>Sair da conta</Text>
-        </Pressable>
+        <View style={[styles.menuSection, { marginTop: 16 }]}>
+          <MenuRow item={sairItem} />
+        </View>
+
+        <Text style={styles.version}>RedeemSoft v1.0</Text>
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -103,51 +153,80 @@ export default function PerfilTab() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
-  scroll: { paddingBottom: 40 },
+  scroll: { paddingHorizontal: 20, paddingBottom: 40 },
 
-  heroSection: {
-    alignItems: 'center', paddingVertical: 28, paddingHorizontal: 24,
-    borderBottomWidth: 1, borderBottomColor: Colors.border, gap: 8,
+  profileHeader: {
+    alignItems: 'center',
+    paddingTop: 24,
+    paddingBottom: 32,
   },
   avatarWrap: {
-    width: 88, height: 88, borderRadius: 44,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
     backgroundColor: Colors.primary,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: Colors.surfaceHighlight,
-    overflow: 'hidden', marginBottom: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: Colors.primary + '66',
   },
-  avatarImg: { width: 88, height: 88 },
+  avatarImg: { width: 88, height: 88, borderRadius: 44 },
   avatarLetter: { fontSize: 36, fontWeight: '800', color: '#fff' },
-  nome: { fontSize: 20, fontWeight: '800', color: Colors.text },
+  userName: { fontSize: 22, fontWeight: '800', color: Colors.text, marginBottom: 8 },
   typeBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: Colors.surface,
-    borderWidth: 1, borderColor: Colors.primary,
-    borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: Colors.primary + '22',
+    borderWidth: 1,
+    borderColor: Colors.primary + '55',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    marginBottom: 8,
+  },
+  typeBadgeEmpresa: {
+    backgroundColor: '#F5A62322',
+    borderColor: '#F5A62355',
   },
   typeBadgeText: { fontSize: 12, color: Colors.primary, fontWeight: '600' },
-  email: { fontSize: 13, color: Colors.textSecondary },
+  typeBadgeTextEmpresa: { color: '#F5A623' },
+  userEmail: { fontSize: 13, color: Colors.textSecondary },
 
-  menuSection: { paddingHorizontal: 16, paddingTop: 12 },
-  menuItem: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingVertical: 14, paddingHorizontal: 4,
-    borderBottomWidth: 1, borderBottomColor: Colors.border,
-  },
-  menuIcon: {
-    width: 38, height: 38, borderRadius: 10,
+  menuSection: {
     backgroundColor: Colors.surface,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: Colors.border,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    overflow: 'hidden',
   },
+  menuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  menuRowPressed: { backgroundColor: Colors.surfaceHighlight },
+  menuIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: Colors.primary + '22',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuIconDanger: { backgroundColor: Colors.error + '22' },
   menuLabel: { flex: 1, fontSize: 15, fontWeight: '600', color: Colors.text },
+  menuLabelDanger: { color: Colors.error },
+  divider: { height: 1, backgroundColor: Colors.border, marginLeft: 66 },
 
-  logoutBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    marginHorizontal: 16, marginTop: 24,
-    padding: 14, borderRadius: 12,
-    backgroundColor: 'rgba(232,69,96,0.08)',
-    borderWidth: 1, borderColor: 'rgba(232,69,96,0.2)',
+  version: {
+    textAlign: 'center',
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 32,
   },
-  logoutText: { fontSize: 15, fontWeight: '600', color: Colors.error },
 });

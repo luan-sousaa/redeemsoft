@@ -31,7 +31,7 @@ function RootLayoutNav() {
     const isRecoveryScreen = recoveryScreens.includes(segments[1] as string ?? '');
 
     if (isAuthenticated && inAuthGroup && !isRecoveryScreen) {
-      router.replace('/(app)' as Href);
+      router.replace('/(app)/(tabs)' as Href);
     } else if (!isAuthenticated && !inAuthGroup) {
       router.replace('/(auth)/login' as Href);
     }

@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export default function TabsLayout() {
   const { user } = useAuth();
-  const isDev = user?.type === 'developer';
+  const isEmpresa = user?.type === 'client';
 
   return (
     <Tabs
@@ -15,11 +15,11 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarStyle: {
           backgroundColor: Colors.surface,
-          borderTopWidth: 1,
           borderTopColor: Colors.border,
-          height: 60,
-          paddingBottom: 8,
-          paddingTop: 6,
+          borderTopWidth: 1,
+          height: 64,
+          paddingBottom: 10,
+          paddingTop: 8,
         },
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.textSecondary,
@@ -29,27 +29,23 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: isDev ? 'Início' : 'Início',
+          title: 'Início',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="candidaturas"
+        name="projetos"
         options={{
-          title: isDev ? 'Candidaturas' : 'Projetos',
+          title: isEmpresa ? 'Projetos' : 'Candidaturas',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons
-              name={isDev ? 'document-text-outline' : 'briefcase-outline'}
-              size={size}
-              color={color}
-            />
+            <Ionicons name="document-text-outline" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="chat"
+        name="mensagens"
         options={{
           title: 'Mensagens',
           tabBarIcon: ({ color, size }) => (
