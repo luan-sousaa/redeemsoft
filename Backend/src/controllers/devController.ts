@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { db } from '../db/db';
-import { desenvolvedor, usuario, aplicacao, novoProjeto, cliente } from '../db/schema';
+import { desenvolvedor, usuario, aplicacao, novoProjeto, cliente, contrato } from '../db/schema';
 import { and, eq, ne } from 'drizzle-orm';
 
 export const buscarDesenvolvedorPorId = async (req: Request, res: Response) => {
@@ -162,11 +162,13 @@ export const buscarConversas = async (req: Request, res: Response) => {
           projetoTitulo: novoProjeto.titulo,
           projetoValor: novoProjeto.orcamento,
           empresaNome: usuario.nome,
+          contratoId: contrato.idContrato,
         })
         .from(aplicacao)
         .innerJoin(novoProjeto, eq(aplicacao.idProjeto, novoProjeto.idProjeto))
         .innerJoin(cliente, eq(novoProjeto.idCliente, cliente.idCliente))
         .innerJoin(usuario, eq(cliente.idUsuario, usuario.idUsuario))
+        .leftJoin(contrato, eq(contrato.candidaturaId, aplicacao.idAplicacao))
         .where(and(eq(aplicacao.idDev, idDev), eq(aplicacao.status, 'aceito')));
 
       return res.status(200).json(conversas.map(c => ({
@@ -176,6 +178,7 @@ export const buscarConversas = async (req: Request, res: Response) => {
         projetoTitulo: c.projetoTitulo,
         projetoValor: c.projetoValor,
         tipo: 'empresa',
+        contratoId: c.contratoId ?? null,
       })));
     }
 
@@ -187,11 +190,13 @@ export const buscarConversas = async (req: Request, res: Response) => {
           projetoValor: novoProjeto.orcamento,
           devNome: usuario.nome,
           devFoto: desenvolvedor.foto,
+          contratoId: contrato.idContrato,
         })
         .from(aplicacao)
         .innerJoin(novoProjeto, eq(aplicacao.idProjeto, novoProjeto.idProjeto))
         .innerJoin(desenvolvedor, eq(aplicacao.idDev, desenvolvedor.idDev))
         .innerJoin(usuario, eq(desenvolvedor.idUsuario, usuario.idUsuario))
+        .leftJoin(contrato, eq(contrato.candidaturaId, aplicacao.idAplicacao))
         .where(and(eq(novoProjeto.idCliente, idCliente), eq(aplicacao.status, 'aceito')));
 
       return res.status(200).json(conversas.map(c => ({
@@ -201,6 +206,7 @@ export const buscarConversas = async (req: Request, res: Response) => {
         projetoTitulo: c.projetoTitulo,
         projetoValor: c.projetoValor,
         tipo: 'dev',
+        contratoId: c.contratoId ?? null,
       })));
     }
 

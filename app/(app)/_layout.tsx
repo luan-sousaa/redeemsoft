@@ -3,7 +3,7 @@ import { Stack } from 'expo-router';
 export default function AppLayout() {
   return (
     <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
-      <Stack.Screen name="index" />
+      <Stack.Screen name="(tabs)" />
       <Stack.Screen name="marketplace" />
       <Stack.Screen name="meus-projetos" />
       <Stack.Screen name="criar-projeto" />
@@ -23,7 +23,6 @@ export default function AppLayout() {
       <Stack.Screen name="pagamento-pix" />
       <Stack.Screen name="notificacoes" />
       <Stack.Screen name="confirmar-contratacao" />
-      <Stack.Screen name="chat" />
     </Stack>
   );
 }

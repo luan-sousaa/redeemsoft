@@ -335,7 +335,7 @@ export default function MeusProjetosScreen() {
     try {
       const c = await authService.getContratoPorProjeto(projeto.id);
       router.push({
-        pathname: '/(app)/chat',
+        pathname: '/chat',
         params: { contratoId: String(c.id), projetoNome: projeto.titulo, devNome: c.nomeDev ?? '' },
       });
     } catch {

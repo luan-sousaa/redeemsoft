@@ -5,7 +5,6 @@ import React, { useEffect, useState } from 'react';
 import {
   ActionSheetIOS,
   Alert,
-  Dimensions,
   Image,
   KeyboardAvoidingView,
   Modal,
@@ -21,14 +20,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
 import { Button } from '@/components/ui/Button';
+import { ProjetoCard } from '@/components/ProjetoCard';
 import { Colors } from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { profileService, type ProjetoDev } from '@/services/profileService';
 
-const { width } = Dimensions.get('window');
 const GRID_GAP = 12;
 const GRID_PADDING = 24;
-const CARD_WIDTH = (width - GRID_PADDING * 2 - GRID_GAP) / 2;
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
 
@@ -219,65 +217,6 @@ function ProjetoModal({ visible, projeto, onClose, onSave }: ProjetoModalProps) 
   );
 }
 
-// ─── Card de projeto ──────────────────────────────────────────────────────────
-
-function ProjetoCard({
-  projeto,
-  onEdit,
-  onDelete,
-}: {
-  projeto: ProjetoDev;
-  onEdit: () => void;
-  onDelete: () => void;
-}) {
-  return (
-    <View style={styles.card}>
-      {/* Imagem */}
-      <View style={styles.cardImageContainer}>
-        {projeto.foto ? (
-          <Image source={{ uri: projeto.foto }} style={styles.cardImage} />
-        ) : (
-          <View style={styles.cardImageEmpty}>
-            <Ionicons name="code-slash-outline" size={32} color={Colors.textSecondary} />
-          </View>
-        )}
-      </View>
-
-      {/* Conteúdo */}
-      <View style={styles.cardBody}>
-        <Text style={styles.cardTitulo} numberOfLines={2}>{projeto.titulo}</Text>
-
-        {/* Stack chips */}
-        {projeto.stack.length > 0 && (
-          <View style={styles.stackRow}>
-            {projeto.stack.slice(0, 3).map(s => (
-              <View key={s} style={styles.stackChip}>
-                <Text style={styles.stackChipText}>{s}</Text>
-              </View>
-            ))}
-            {projeto.stack.length > 3 && (
-              <View style={styles.stackChip}>
-                <Text style={styles.stackChipText}>+{projeto.stack.length - 3}</Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* Ações */}
-        <View style={styles.cardActions}>
-          <Pressable style={styles.editBtn} onPress={onEdit}>
-            <Ionicons name="pencil-outline" size={14} color={Colors.primary} />
-            <Text style={styles.editBtnText}>Editar</Text>
-          </Pressable>
-          <Pressable style={styles.deleteBtn} onPress={onDelete}>
-            <Ionicons name="trash-outline" size={16} color={Colors.error} />
-          </Pressable>
-        </View>
-      </View>
-    </View>
-  );
-}
-
 // ─── Tela principal ───────────────────────────────────────────────────────────
 
 export default function SobreMimScreen() {
@@ -413,6 +352,7 @@ export default function SobreMimScreen() {
                 <ProjetoCard
                   key={p.id}
                   projeto={p}
+                  editable
                   onEdit={() => abrirModal(p)}
                   onDelete={() => confirmarDeletar(p.id)}
                 />
@@ -505,42 +445,6 @@ const styles = StyleSheet.create({
   projetosGrid: {
     flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP, marginBottom: 28,
   },
-
-  // Card de projeto
-  card: {
-    width: CARD_WIDTH,
-    backgroundColor: Colors.surface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    overflow: 'hidden',
-  },
-  cardImageContainer: { width: '100%', height: CARD_WIDTH * 0.65 },
-  cardImage: { width: '100%', height: '100%', resizeMode: 'cover' },
-  cardImageEmpty: {
-    width: '100%', height: '100%',
-    backgroundColor: Colors.surfaceHighlight,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  cardBody: { padding: 10, gap: 6 },
-  cardTitulo: { fontSize: 13, fontWeight: '700', color: Colors.text, lineHeight: 18 },
-  stackRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
-  stackChip: {
-    backgroundColor: Colors.surfaceHighlight,
-    borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3,
-  },
-  stackChipText: { fontSize: 10, color: Colors.primary, fontWeight: '600' },
-  cardActions: {
-    flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between', marginTop: 4,
-  },
-  editBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: Colors.surfaceHighlight,
-    borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5,
-  },
-  editBtnText: { fontSize: 11, color: Colors.primary, fontWeight: '600' },
-  deleteBtn: { padding: 5 },
 
   saveContainer: { marginTop: 8 },
 });

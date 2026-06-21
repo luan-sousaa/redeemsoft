@@ -13,8 +13,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ProjetoCard } from '@/components/ProjetoCard';
 import { Colors } from '@/constants/colors';
 import { authService } from '@/services/authService';
+import type { ProjetoDev } from '@/services/profileService';
 import { parseList } from '@/utils/parseList';
 
 const GRID_PADDING = 20;
@@ -69,7 +71,7 @@ export default function DesenvolvedorDetalheScreen() {
     habilidades: string[];
     certificacoes: string[];
     foto: string | null;
-    projetos: { titulo: string; stack: string }[];
+    projetos: ProjetoDev[];
   };
 
   const [dev, setDev] = useState<DevData | null>(null);
@@ -91,7 +93,14 @@ export default function DesenvolvedorDetalheScreen() {
         habilidades: parseList(data.habilidades),
         certificacoes: parseList(data.certificacoes),
         foto: data.foto ?? null,
-        projetos: data.projetos ?? [],
+        projetos: (() => {
+          try {
+            const raw = data.projetos;
+            if (Array.isArray(raw)) return raw;
+            if (typeof raw === 'string') return JSON.parse(raw);
+          } catch {}
+          return [];
+        })(),
       });
     } catch {
       setErro(true);
@@ -211,17 +220,13 @@ export default function DesenvolvedorDetalheScreen() {
             )}
           </View>
 
-          {/* Projetos em que o dev foi aceito */}
+          {/* Projetos do dev */}
           <View style={styles.section}>
             <SectionHeader title="Projetos" />
             {dev.projetos.length > 0 ? (
               <View style={styles.projetosGrid}>
                 {dev.projetos.map((p, i) => (
-                  <View key={i} style={styles.projetoCard}>
-                    <Ionicons name="briefcase-outline" size={18} color={Colors.primary} />
-                    <Text style={styles.projetoTitulo} numberOfLines={2}>{p.titulo}</Text>
-                    <Text style={styles.projetoStack} numberOfLines={1}>{p.stack}</Text>
-                  </View>
+                  <ProjetoCard key={p.id ?? i} projeto={p} editable={false} />
                 ))}
               </View>
             ) : (
@@ -394,25 +399,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
-  },
-  projetoCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: 14,
-    width: '47%',
-    gap: 8,
-  },
-  projetoTitulo: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.text,
-    lineHeight: 18,
-  },
-  projetoStack: {
-    fontSize: 11,
-    color: Colors.primary,
-    fontWeight: '600',
   },
 });

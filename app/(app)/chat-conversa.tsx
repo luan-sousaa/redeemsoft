@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -13,8 +14,10 @@ import {
 } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Head from 'expo-router/head';
+
 import { Colors } from '@/constants/colors';
+import { useAuth } from '@/contexts/AuthContext';
+import { api } from '@/services/api';
 
 // ─── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -23,21 +26,27 @@ type Message = {
   text: string;
   sender: 'me' | 'other';
   time: string;
-  status?: 'sent' | 'read';
 };
 
-// ─── Dados mock ────────────────────────────────────────────────────────────────
+type RawMsg = {
+  idMensagem: number;
+  contratoId: number;
+  autorId: number;
+  autorTipo: 'empresa' | 'dev';
+  texto: string;
+  criadoEm: string;
+};
 
-const MESSAGES_MOCK: Message[] = [
-  { id: '1', text: 'Oi! Vi sua candidatura pro projeto de app mobile 👋', sender: 'other', time: '14:02' },
-  { id: '2', text: 'Oi João! Sim, tenho experiência justamente com React Native', sender: 'me', time: '14:03', status: 'read' },
-  { id: '3', text: 'Que ótimo. Você conseguiria começar semana que vem?', sender: 'other', time: '14:04' },
-  { id: '4', text: 'Sim, consigo! Qual seria a stack completa?', sender: 'me', time: '14:05', status: 'read' },
-  { id: '5', text: 'React Native + Node.js no backend. Temos um prazo de 3 meses', sender: 'other', time: '14:07' },
-  { id: '6', text: 'Perfeito, estou disponível. Podemos agendar uma call para alinhar os detalhes?', sender: 'me', time: '14:08', status: 'read' },
-  { id: '7', text: 'Claro! Que tal amanhã às 14h?', sender: 'other', time: '14:09' },
-  { id: '8', text: 'Combinado! Te mando o link do Meet agora 🙌', sender: 'me', time: '14:10', status: 'sent' },
-];
+// ─── Utils ──────────────────────────────────────────────────────────────────────
+
+function formatTime(iso: string): string {
+  try {
+    const d = new Date(iso.replace(' ', 'T') + 'Z');
+    return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return '';
+  }
+}
 
 // ─── Separador de data ──────────────────────────────────────────────────────────
 
@@ -53,17 +62,17 @@ function DateSeparator({ label }: { label: string }) {
 
 // ─── Bolha de mensagem ─────────────────────────────────────────────────────────
 
-function MessageBubble({ message, index }: { message: Message; index: number }) {
+function MessageBubble({ message, index, avatarLetter }: { message: Message; index: number; avatarLetter: string }) {
   const isMe = message.sender === 'me';
 
   return (
     <Animated.View
-      entering={FadeInUp.delay(index * 40).duration(280)}
+      entering={FadeInUp.delay(index < 20 ? index * 30 : 0).duration(240)}
       style={[styles.bubbleRow, isMe ? styles.bubbleRowMe : styles.bubbleRowOther]}
     >
       {!isMe && (
         <View style={styles.avatarSmall}>
-          <Text style={styles.avatarSmallText}>J</Text>
+          <Text style={styles.avatarSmallText}>{avatarLetter}</Text>
         </View>
       )}
 
@@ -71,16 +80,15 @@ function MessageBubble({ message, index }: { message: Message; index: number }) 
         <Text style={[styles.bubbleText, isMe ? styles.bubbleTextMe : styles.bubbleTextOther]}>
           {message.text}
         </Text>
-
         <View style={styles.bubbleMeta}>
           <Text style={[styles.bubbleTime, isMe && styles.bubbleTimeMe]}>
             {message.time}
           </Text>
           {isMe && (
             <Ionicons
-              name={message.status === 'read' ? 'checkmark-done' : 'checkmark'}
+              name="checkmark-done"
               size={14}
-              color={message.status === 'read' ? '#A8C8FF' : 'rgba(255,255,255,0.5)'}
+              color="rgba(255,255,255,0.5)"
               style={{ marginLeft: 3 }}
             />
           )}
@@ -95,13 +103,11 @@ function MessageBubble({ message, index }: { message: Message; index: number }) 
 function ChatHeader({
   onBack,
   nome,
-  foto,
   projetoTitulo,
   projetoValor,
 }: {
   onBack: () => void;
   nome: string;
-  foto: string;
   projetoTitulo: string;
   projetoValor: number;
 }) {
@@ -114,16 +120,9 @@ function ChatHeader({
         <Ionicons name="chevron-back" size={26} color={Colors.text} />
       </Pressable>
 
-      {foto ? (
-        <View style={styles.headerAvatar}>
-          {/* eslint-disable-next-line */}
-          <Text style={styles.headerAvatarText}>{iniciais}</Text>
-        </View>
-      ) : (
-        <View style={styles.headerAvatar}>
-          <Text style={styles.headerAvatarText}>{iniciais}</Text>
-        </View>
-      )}
+      <View style={styles.headerAvatar}>
+        <Text style={styles.headerAvatarText}>{iniciais}</Text>
+      </View>
 
       <View style={styles.headerInfo}>
         <Text style={styles.headerName} numberOfLines={1}>{nome || 'Chat'}</Text>
@@ -134,17 +133,10 @@ function ChatHeader({
               {projetoTitulo} · {valorFormatado}
             </Text>
           </View>
-        ) : (
-          <View style={styles.headerStatus}>
-            <View style={styles.onlineDot} />
-            <Text style={styles.headerStatusText}>online</Text>
-          </View>
-        )}
+        ) : null}
       </View>
 
-      <Pressable style={styles.headerAction} hitSlop={12}>
-        <Ionicons name="ellipsis-vertical" size={20} color={Colors.textSecondary} />
-      </Pressable>
+      <View style={styles.headerAction} />
     </View>
   );
 }
@@ -155,44 +147,36 @@ function InputBar({
   value,
   onChangeText,
   onSend,
+  disabled,
 }: {
   value: string;
   onChangeText: (t: string) => void;
   onSend: () => void;
+  disabled?: boolean;
 }) {
   const hasText = value.trim().length > 0;
 
   return (
-    <View style={styles.inputBar}>
-      <Pressable style={styles.inputBarIcon} hitSlop={10}>
-        <Ionicons name="happy-outline" size={24} color={Colors.textSecondary} />
-      </Pressable>
-
+    <View style={[styles.inputBar, disabled && styles.inputBarDisabled]}>
       <TextInput
         style={styles.input}
         value={value}
         onChangeText={onChangeText}
-        placeholder="Mensagem..."
+        placeholder={disabled ? 'Chat indisponível' : 'Mensagem...'}
         placeholderTextColor={Colors.textSecondary}
         multiline
         maxLength={500}
+        editable={!disabled}
       />
-
-      {!hasText ? (
-        <Pressable style={styles.inputBarIcon} hitSlop={10}>
-          <Ionicons name="attach-outline" size={24} color={Colors.textSecondary} />
-        </Pressable>
-      ) : null}
-
       <Pressable
-        style={[styles.sendBtn, hasText && styles.sendBtnActive]}
-        onPress={hasText ? onSend : undefined}
+        style={[styles.sendBtn, hasText && !disabled && styles.sendBtnActive]}
+        onPress={hasText && !disabled ? onSend : undefined}
         hitSlop={8}
       >
         <Ionicons
           name="send"
           size={18}
-          color={hasText ? '#FFFFFF' : Colors.textSecondary}
+          color={hasText && !disabled ? '#FFFFFF' : Colors.textSecondary}
         />
       </Pressable>
     </View>
@@ -203,50 +187,115 @@ function InputBar({
 
 export default function ChatConversaScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const params = useLocalSearchParams<{
     nomeContato?: string;
     fotoContato?: string;
     projetoTitulo?: string;
     projetoValor?: string;
+    contratoId?: string;
   }>();
 
   const nomeContato = params.nomeContato ?? 'Chat';
-  const fotoContato = params.fotoContato ?? '';
   const projetoTitulo = params.projetoTitulo ?? '';
   const projetoValor = Number(params.projetoValor ?? 0);
+  const contratoId = params.contratoId ? Number(params.contratoId) : null;
+  const avatarLetter = nomeContato.charAt(0).toUpperCase();
+
+  const myId = Number(user?.id ?? 0);
+  const autorTipo: 'dev' | 'empresa' = user?.type === 'developer' ? 'dev' : 'empresa';
 
   const listRef = useRef<FlatList>(null);
-  const [messages, setMessages] = useState<Message[]>(MESSAGES_MOCK);
+  const lastIdRef = useRef<number>(0);
+
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [sending, setSending] = useState(false);
 
-  function handleSend() {
+  function rawToMessage(m: RawMsg): Message {
+    return {
+      id: String(m.idMensagem),
+      text: m.texto,
+      sender: m.autorId === myId ? 'me' : 'other',
+      time: formatTime(m.criadoEm),
+    };
+  }
+
+  const fetchMessages = useCallback(async () => {
+    if (!contratoId) return;
+    try {
+      const data = await api.get<RawMsg[]>(`/contrato/${contratoId}/mensagens`);
+      const novas = data.filter(m => m.idMensagem > lastIdRef.current);
+      if (novas.length > 0) {
+        lastIdRef.current = data[data.length - 1]?.idMensagem ?? lastIdRef.current;
+        setMessages(prev => [...prev, ...novas.map(rawToMessage)]);
+        setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 80);
+      }
+    } catch {
+      // silencioso — polling continua
+    }
+  }, [contratoId, myId]);
+
+  // Carga inicial
+  useEffect(() => {
+    if (!contratoId) { setIsLoading(false); return; }
+    (async () => {
+      try {
+        const data = await api.get<RawMsg[]>(`/contrato/${contratoId}/mensagens`);
+        lastIdRef.current = data[data.length - 1]?.idMensagem ?? 0;
+        setMessages(data.map(rawToMessage));
+        setTimeout(() => listRef.current?.scrollToEnd({ animated: false }), 100);
+      } catch {
+        // silencioso
+      } finally {
+        setIsLoading(false);
+      }
+    })();
+  }, [contratoId]);
+
+  // Polling a cada 5s
+  useEffect(() => {
+    if (!contratoId) return;
+    const timer = setInterval(fetchMessages, 5000);
+    return () => clearInterval(timer);
+  }, [fetchMessages, contratoId]);
+
+  async function handleSend() {
     const text = inputText.trim();
-    if (!text) return;
+    if (!text || !contratoId || sending) return;
+    setSending(true);
+    setInputText('');
 
-    const newMsg: Message = {
-      id: String(Date.now()),
+    const optimistic: Message = {
+      id: `opt-${Date.now()}`,
       text,
       sender: 'me',
       time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-      status: 'sent',
     };
-
-    setMessages(prev => [...prev, newMsg]);
-    setInputText('');
+    setMessages(prev => [...prev, optimistic]);
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 80);
+
+    try {
+      const saved = await api.post<RawMsg>(`/contrato/${contratoId}/mensagem`, {
+        autorId: myId,
+        autorTipo,
+        texto: text,
+      });
+      lastIdRef.current = saved.idMensagem;
+      setMessages(prev => prev.map(m => m.id === optimistic.id ? rawToMessage(saved) : m));
+    } catch {
+      // Mantém mensagem otimista na tela — não remove para não confundir
+    } finally {
+      setSending(false);
+    }
   }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-
-       <Head>
-                    <title> Chat | RedeemSoft</title>
-                    <meta name="description" content="Veja suas candidaturas no RedeemSoft" />
-                  </Head>
       <ChatHeader
         onBack={() => router.back()}
         nome={nomeContato}
-        foto={fotoContato}
         projetoTitulo={projetoTitulo}
         projetoValor={projetoValor}
       />
@@ -256,24 +305,45 @@ export default function ChatConversaScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}
       >
-        <FlatList
-          ref={listRef}
-          data={messages}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.messageList}
-          showsVerticalScrollIndicator={false}
-          onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
-          ListHeaderComponent={<DateSeparator label="Hoje" />}
-          renderItem={({ item, index }) => (
-            <MessageBubble message={item} index={index} />
-          )}
-        />
+        {isLoading ? (
+          <View style={styles.center}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+          </View>
+        ) : !contratoId ? (
+          <View style={styles.center}>
+            <Ionicons name="lock-closed-outline" size={48} color={Colors.textSecondary} />
+            <Text style={styles.emptyTitle}>Contrato não iniciado</Text>
+            <Text style={styles.emptyText}>
+              Aguarde a empresa confirmar o pagamento para liberar o chat.
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            ref={listRef}
+            data={messages}
+            keyExtractor={item => item.id}
+            contentContainerStyle={styles.messageList}
+            showsVerticalScrollIndicator={false}
+            onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
+            ListHeaderComponent={<DateSeparator label="Hoje" />}
+            ListEmptyComponent={
+              <View style={styles.center}>
+                <Ionicons name="chatbubble-outline" size={48} color={Colors.textSecondary} />
+                <Text style={styles.emptyText}>Nenhuma mensagem ainda. Diga olá!</Text>
+              </View>
+            }
+            renderItem={({ item, index }) => (
+              <MessageBubble message={item} index={index} avatarLetter={avatarLetter} />
+            )}
+          />
+        )}
 
         <SafeAreaView edges={['bottom']} style={styles.inputSafe}>
           <InputBar
             value={inputText}
             onChangeText={setInputText}
             onSend={handleSend}
+            disabled={!contratoId}
           />
         </SafeAreaView>
       </KeyboardAvoidingView>
@@ -284,222 +354,98 @@ export default function ChatConversaScreen() {
 // ─── Estilos ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
+  container: { flex: 1, backgroundColor: Colors.background },
+  flex: { flex: 1 },
+
+  center: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    gap: 12, paddingHorizontal: 32,
   },
-  flex: {
-    flex: 1,
-  },
+  emptyTitle: { fontSize: 17, fontWeight: '700', color: Colors.text, textAlign: 'center' },
+  emptyText: { fontSize: 13, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
 
   // ── Header
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    backgroundColor: Colors.background,
-    gap: 10,
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 12, paddingVertical: 10,
+    borderBottomWidth: 1, borderBottomColor: Colors.border,
+    backgroundColor: Colors.background, gap: 10,
   },
-  headerBack: {
-    padding: 4,
-  },
+  headerBack: { padding: 4 },
   headerAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 40, height: 40, borderRadius: 20,
     backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
   },
-  headerAvatarText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  headerInfo: {
-    flex: 1,
-    gap: 2,
-  },
-  headerName: {
-    color: Colors.text,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  headerStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  onlineDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: '#4ADE80',
-  },
-  headerStatusText: {
-    color: '#4ADE80',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  headerAction: {
-    padding: 6,
-  },
-  projetoInfoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  projetoInfoText: {
-    color: Colors.primary,
-    fontSize: 12,
-    fontWeight: '600',
-    flex: 1,
-  },
+  headerAvatarText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  headerInfo: { flex: 1, gap: 2 },
+  headerName: { color: Colors.text, fontSize: 16, fontWeight: '700' },
+  headerAction: { width: 36 },
+  projetoInfoRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  projetoInfoText: { color: Colors.primary, fontSize: 12, fontWeight: '600', flex: 1 },
 
-  // ── Lista de mensagens
+  // ── Lista
   messageList: {
-    paddingHorizontal: 14,
-    paddingTop: 16,
-    paddingBottom: 8,
-    gap: 6,
+    paddingHorizontal: 14, paddingTop: 16, paddingBottom: 8, gap: 6, flexGrow: 1,
   },
 
   // ── Separador de data
   dateSeparator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 12,
-    gap: 8,
+    flexDirection: 'row', alignItems: 'center', marginVertical: 12, gap: 8,
   },
-  dateLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: Colors.surfaceHighlight,
-  },
-  dateLabel: {
-    color: Colors.textSecondary,
-    fontSize: 12,
-    fontWeight: '500',
-  },
+  dateLine: { flex: 1, height: 1, backgroundColor: Colors.surfaceHighlight },
+  dateLabel: { color: Colors.textSecondary, fontSize: 12, fontWeight: '500' },
 
   // ── Bolhas
   bubbleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
-    marginVertical: 3,
+    flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginVertical: 3,
   },
-  bubbleRowMe: {
-    justifyContent: 'flex-end',
-  },
-  bubbleRowOther: {
-    justifyContent: 'flex-start',
-  },
+  bubbleRowMe: { justifyContent: 'flex-end' },
+  bubbleRowOther: { justifyContent: 'flex-start' },
   avatarSmall: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 30, height: 30, borderRadius: 15,
     backgroundColor: Colors.surfaceHighlight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  avatarSmallText: {
-    color: Colors.textSecondary,
-    fontSize: 13,
-    fontWeight: '700',
-  },
+  avatarSmallText: { color: Colors.textSecondary, fontSize: 13, fontWeight: '700' },
   bubble: {
-    maxWidth: '75%',
-    paddingVertical: 9,
-    paddingHorizontal: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    elevation: 2,
+    maxWidth: '75%', paddingVertical: 9, paddingHorizontal: 14,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15, shadowRadius: 3, elevation: 2,
   },
-  bubbleMe: {
-    backgroundColor: Colors.primary,
-    borderRadius: 18,
-    borderBottomRightRadius: 4,
-  },
-  bubbleOther: {
-    backgroundColor: Colors.surfaceHighlight,
-    borderRadius: 18,
-    borderBottomLeftRadius: 4,
-  },
-  bubbleText: {
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  bubbleTextMe: {
-    color: '#FFFFFF',
-  },
-  bubbleTextOther: {
-    color: Colors.text,
-  },
+  bubbleMe: { backgroundColor: Colors.primary, borderRadius: 18, borderBottomRightRadius: 4 },
+  bubbleOther: { backgroundColor: Colors.surfaceHighlight, borderRadius: 18, borderBottomLeftRadius: 4 },
+  bubbleText: { fontSize: 15, lineHeight: 22 },
+  bubbleTextMe: { color: '#FFFFFF' },
+  bubbleTextOther: { color: Colors.text },
   bubbleMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    marginTop: 4,
-    gap: 2,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 4, gap: 2,
   },
-  bubbleTime: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-  },
-  bubbleTimeMe: {
-    color: 'rgba(255,255,255,0.6)',
-  },
+  bubbleTime: { fontSize: 11, color: Colors.textSecondary },
+  bubbleTimeMe: { color: 'rgba(255,255,255,0.6)' },
 
   // ── Input
-  inputSafe: {
-    backgroundColor: Colors.background,
-  },
+  inputSafe: { backgroundColor: Colors.background },
   inputBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    gap: 10,
+    flexDirection: 'row', alignItems: 'flex-end',
+    paddingHorizontal: 12, paddingVertical: 10,
+    borderTopWidth: 1, borderTopColor: Colors.border, gap: 10,
   },
-  inputBarIcon: {
-    paddingBottom: 6,
-  },
+  inputBarDisabled: { opacity: 0.5 },
   input: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-    borderRadius: 24,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 10,
-    fontSize: 15,
-    color: Colors.text,
-    maxHeight: 110,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    flex: 1, backgroundColor: Colors.surface, borderRadius: 24,
+    paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10,
+    fontSize: 15, color: Colors.text, maxHeight: 110,
+    borderWidth: 1, borderColor: Colors.border,
   },
   sendBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 40, height: 40, borderRadius: 20,
+    alignItems: 'center', justifyContent: 'center',
     backgroundColor: Colors.surfaceHighlight,
   },
   sendBtnActive: {
     backgroundColor: Colors.primary,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowColor: Colors.primary, shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4, shadowRadius: 6, elevation: 4,
   },
 });

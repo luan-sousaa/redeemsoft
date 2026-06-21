@@ -26,6 +26,7 @@ type Conversa = {
   projetoTitulo: string;
   projetoValor: number;
   tipo: 'dev' | 'empresa';
+  contratoId: number | null;
 };
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
@@ -96,6 +97,7 @@ export default function ChatScreen() {
           projetoTitulo: c.projetoTitulo,
           projetoValor: c.projetoValor,
           tipo: c.tipo,
+          contratoId: c.contratoId ?? null,
         }))
       );
     } catch {
@@ -122,6 +124,7 @@ export default function ChatScreen() {
         fotoContato: c.fotoContato ?? '',
         projetoTitulo: c.projetoTitulo,
         projetoValor: String(c.projetoValor),
+        contratoId: c.contratoId != null ? String(c.contratoId) : '',
       },
     });
   }
@@ -130,11 +133,7 @@ export default function ChatScreen() {
     <SafeAreaView style={styles.safe}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={Colors.text} />
-        </Pressable>
         <Text style={styles.title}>Mensagens</Text>
-        <View style={{ width: 40 }} />
       </View>
 
       {/* Barra de filtro */}

@@ -106,7 +106,7 @@ export default function PagamentoPixScreen() {
               <Button
                 title="Abrir Chat do Projeto"
                 onPress={() => router.replace({
-                  pathname: '/(app)/chat',
+                  pathname: '/chat',
                   params: { contratoId, projetoNome: projetoNome ?? '', devNome: devNome ?? '' },
                 })}
                 style={styles.button}

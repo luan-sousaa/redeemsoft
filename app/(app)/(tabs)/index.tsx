@@ -7,7 +7,6 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Image } from 'expo-image';
-import { Logo } from '@/components/Logo';
 import { DrawerMenu } from '@/components/DrawerMenu';
 import { Colors } from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
@@ -81,7 +80,7 @@ function HomeDev() {
           icon="chatbubbles-outline"
           title="Mensagens"
           description="Converse com as empresas dos projetos que você está trabalhando"
-          onPress={() => router.push('/(app)/chat' as Href)}
+          onPress={() => router.push('/chat' as Href)}
         />
       </Animated.View>
 
@@ -156,7 +155,7 @@ function HomeEmpresa() {
           icon="chatbubbles-outline"
           title="Mensagens"
           description="Converse com os desenvolvedores contratados nos seus projetos"
-          onPress={() => router.push('/(app)/chat' as Href)}
+          onPress={() => router.push('/chat' as Href)}
         />
       </Animated.View>
 
