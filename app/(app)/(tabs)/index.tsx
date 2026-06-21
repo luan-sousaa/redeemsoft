@@ -131,13 +131,6 @@ function HomeEmpresa() {
 
   const header = (
     <>
-      {/* Banner hero */}
-      <Image
-        source={require('@/assets/images/banner-empresa.jpg')}
-        style={styles.banner}
-        contentFit="cover"
-      />
-
       {/* Barra de busca */}
       <View style={styles.searchRow}>
         <Ionicons name="search-outline" size={18} color={Colors.textSecondary} />
@@ -155,6 +148,13 @@ function HomeEmpresa() {
           </Pressable>
         )}
       </View>
+
+      {/* Banner hero — abaixo da busca */}
+      <Image
+        source={require('@/assets/images/banner-empresa.jpg')}
+        style={styles.banner}
+        contentFit="cover"
+      />
 
       <Text style={styles.sectionLabel}>
         {filtrado.length > 0 ? `${filtrado.length} desenvolvedor${filtrado.length > 1 ? 'es' : ''} disponíve${filtrado.length > 1 ? 'is' : 'l'}` : 'Nenhum resultado'}
@@ -350,10 +350,12 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
 
   banner: {
-    width: '100%',
+    width: '80%',
     aspectRatio: 2.4,
-    borderRadius: 0,
-    marginBottom: 0,
+    borderRadius: 28,
+    alignSelf: 'center',
+    marginVertical: 12,
+    overflow: 'hidden',
   },
 
   topHeader: {
