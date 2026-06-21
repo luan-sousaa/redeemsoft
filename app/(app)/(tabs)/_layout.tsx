@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
 
@@ -32,7 +32,7 @@ export default function TabsLayout() {
         options={{
           title: 'Início',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" size={size} color={color} />
+            <MaterialIcons name="home" size={size} color={color} />
           ),
         }}
       />
@@ -41,7 +41,7 @@ export default function TabsLayout() {
         options={{
           title: isEmpresa ? 'Projetos' : 'Candidaturas',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="document-text-outline" size={size} color={color} />
+            <MaterialIcons name="work-outline" size={size} color={color} />
           ),
         }}
       />
@@ -50,7 +50,7 @@ export default function TabsLayout() {
         options={{
           title: 'Mensagens',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubbles-outline" size={size} color={color} />
+            <MaterialIcons name="chat-bubble-outline" size={size} color={color} />
           ),
         }}
       />
@@ -59,7 +59,7 @@ export default function TabsLayout() {
         options={{
           title: 'Perfil',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" size={size} color={color} />
+            <MaterialIcons name="person-outline" size={size} color={color} />
           ),
         }}
       />
