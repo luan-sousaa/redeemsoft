@@ -39,9 +39,9 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="projetos"
         options={{
-          title: isEmpresa ? 'Projetos' : 'Candidaturas',
+          title: isEmpresa ? 'Solicitações' : 'Projetos',
           tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="work-outline" size={size} color={color} />
+            <MaterialIcons name={isEmpresa ? 'list-alt' : 'work-outline'} size={size} color={color} />
           ),
         }}
       />

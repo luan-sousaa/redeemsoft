@@ -1,31 +1,20 @@
-// configuracoes.tsx — Hub de configurações do desenvolvedor.
-// Alterado: links "Sobre mim" e "Projetos" agora apontam para editar-perfil (tela de edição).
-// Adicionado: botão "Ver prévia do perfil" que navega para sobre-mim (prévia pública).
-// O botão de editar avatar no card de perfil também vai para editar-perfil.
-
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import {
-  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import Toast from 'react-native-toast-message';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors } from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/contexts/ProfileContext';
-import { useAvatar } from '@/hooks/use-avatar';
-import { api } from '@/services/api';
-
-// ─── Item de configuração ─────────────────────────────────────────────────────
 
 type ConfigItem = {
   label: string;
@@ -57,97 +46,26 @@ function ConfigRow({ item }: { item: ConfigItem }) {
   );
 }
 
-// ─── Seção ────────────────────────────────────────────────────────────────────
-
-function Section({
-  title,
-  titleIcon,
-  items,
-}: {
-  title: string;
-  titleIcon?: React.ComponentProps<typeof Ionicons>['name'];
-  items: ConfigItem[];
-}) {
-  return (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        {titleIcon && (
-          <Ionicons name={titleIcon} size={16} color={Colors.textSecondary} />
-        )}
-      </View>
-      <View style={styles.sectionCard}>
-        {items.map((item, index) => (
-          <View key={item.label}>
-            <ConfigRow item={item} />
-            {index < items.length - 1 && <View style={styles.separator} />}
-          </View>
-        ))}
-      </View>
-    </View>
-  );
-}
-
-// ─── Tela ─────────────────────────────────────────────────────────────────────
-
 export default function ConfiguracoesScreen() {
   const router = useRouter();
   const { user, logout } = useAuth();
-  const { refreshFoto } = useProfile();
-  const { avatarUri, pickAvatar, isPickerLoading } = useAvatar(user?.id ? Number(user.id) : undefined);
-  const [isSavingFoto, setIsSavingFoto] = useState(false);
+  const { profile } = useProfile();
 
-  async function handleTrocarFoto() {
-    const picked = await pickAvatar();
-    if (!picked) return;
-    const fotoData = `data:image/jpeg;base64,${picked.base64}`;
-    setIsSavingFoto(true);
-    try {
-      // Salva no backend
-      await api.put('/desenvolvedores/meu', { foto: fotoData });
-      // Atualiza ProfileContext (sobre-mim.tsx e DrawerMenu) e AsyncStorage
-      await refreshFoto(picked.uri);
-      Toast.show({ type: 'success', text1: 'Foto atualizada!', text2: 'Sua foto já aparece para as empresas.' });
-    } catch (e: any) {
-      Toast.show({ type: 'error', text1: 'Erro ao salvar foto', text2: e?.message ?? 'Tente novamente.' });
-    } finally {
-      setIsSavingFoto(false);
-    }
-  }
-
-  // Redireciona empresas para a tela de configurações específica
+  // Empresas têm tela própria
   useEffect(() => {
     if (user?.type === 'client') {
       router.replace('/(app)/configuracoes-empresa' as Href);
     }
   }, [user?.type]);
 
-  const editarPerfilItems: ConfigItem[] = [
-    {
-      label: 'Sobre mim e Projetos',
-      icon: 'person-outline',
-      onPress: () => router.push('/(app)/editar-perfil' as Href),
-    },
-    {
-      label: 'Habilidades',
-      icon: 'code-slash-outline',
-      onPress: () => router.push('/(app)/editar-habilidades' as Href),
-    },
-    {
-      label: 'Certificados',
-      icon: 'ribbon-outline',
-      onPress: () => router.push('/(app)/editar-certificados' as Href),
-    },
-  ];
-
-  const minhaContaItems: ConfigItem[] = [
+  const items: ConfigItem[] = [
     {
       label: 'Trocar Senha',
       icon: 'lock-closed-outline',
       onPress: () => router.push('/(auth)/forgot-password' as Href),
     },
     {
-      label: 'Sair',
+      label: 'Sair da conta',
       icon: 'log-out-outline',
       onPress: logout,
       danger: true,
@@ -165,79 +83,44 @@ export default function ConfiguracoesScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Card de perfil com link para prévia */}
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {/* Card de perfil — somente exibição */}
         <View style={styles.profileCard}>
-          {/* Toque no avatar abre o picker de foto da galeria */}
-          <Pressable style={styles.avatar} onPress={handleTrocarFoto} disabled={isPickerLoading || isSavingFoto}>
-            {avatarUri ? (
-              <Image source={{ uri: avatarUri }} style={styles.avatarImage} contentFit="cover" />
+          <View style={styles.avatar}>
+            {profile.fotoUri ? (
+              <Image source={{ uri: profile.fotoUri }} style={styles.avatarImage} contentFit="cover" />
             ) : (
               <Text style={styles.avatarLetter}>
                 {user?.name?.charAt(0).toUpperCase() ?? '?'}
               </Text>
             )}
-            {/* Ícone de câmera sempre visível para indicar que é clicável */}
-            {!isPickerLoading && !isSavingFoto && (
-              <View style={styles.avatarOverlay}>
-                <Ionicons name="camera" size={16} color={Colors.white} />
-              </View>
-            )}
-            {(isPickerLoading || isSavingFoto) && (
-              <View style={styles.avatarOverlay}>
-                <ActivityIndicator color={Colors.white} size="small" />
-              </View>
-            )}
-          </Pressable>
+          </View>
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>{user?.name}</Text>
             <Text style={styles.profileEmail}>{user?.email}</Text>
           </View>
-          <Pressable
-            style={styles.editAvatarBtn}
-            onPress={() => router.push('/(app)/editar-perfil' as Href)}
-          >
-            <Ionicons name="create-outline" size={20} color={Colors.primary} />
-          </Pressable>
         </View>
 
-        {/* Botão "Ver prévia do perfil" */}
-        <Pressable
-          style={({ pressed }) => [styles.previewBtn, pressed && styles.previewBtnPressed]}
-          onPress={() => router.push('/(app)/sobre-mim' as Href)}
-        >
-          <Ionicons name="eye-outline" size={18} color={Colors.primary} />
-          <Text style={styles.previewBtnText}>Ver prévia do perfil</Text>
-          <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
-        </Pressable>
-
-        {/* Editar Perfil */}
-        <Section
-          title="Editar Perfil"
-          titleIcon="create-outline"
-          items={editarPerfilItems}
-        />
-
-        {/* Minha Conta */}
-        <Section
-          title="Minha Conta"
-          items={minhaContaItems}
-        />
+        {/* Conta */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Minha Conta</Text>
+        </View>
+        <View style={styles.sectionCard}>
+          {items.map((item, i) => (
+            <View key={item.label}>
+              <ConfigRow item={item} />
+              {i < items.length - 1 && <View style={styles.separator} />}
+            </View>
+          ))}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-// ─── Estilos ──────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
+  safe: { flex: 1, backgroundColor: Colors.background },
+
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -246,27 +129,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  backBtn: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 20,
-    fontWeight: '800',
-    color: Colors.text,
-    textAlign: 'center',
-  },
+  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { flex: 1, fontSize: 20, fontWeight: '800', color: Colors.text, textAlign: 'center' },
 
-  scroll: {
-    padding: 20,
-    paddingBottom: 48,
-    gap: 20,
-  },
+  scroll: { padding: 20, paddingBottom: 48, gap: 16 },
 
-  // Card de perfil
   profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -278,91 +145,21 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 56, height: 56, borderRadius: 28,
     backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
     overflow: 'hidden',
   },
-  avatarImage: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-  },
-  avatarOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 28,
-  },
-  avatarLetter: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: Colors.white,
-  },
-  profileInfo: {
-    flex: 1,
-  },
-  profileName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.text,
-    marginBottom: 3,
-  },
-  profileEmail: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
-  editAvatarBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.surfaceHighlight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  avatarImage: { width: 56, height: 56, borderRadius: 28 },
+  avatarLetter: { fontSize: 22, fontWeight: '800', color: '#fff' },
+  profileInfo: { flex: 1 },
+  profileName: { fontSize: 15, fontWeight: '700', color: Colors.text, marginBottom: 3 },
+  profileEmail: { fontSize: 12, color: Colors.textSecondary },
 
-  // Botão prévia
-  previewBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: Colors.surface,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: Colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  previewBtnPressed: {
-    backgroundColor: Colors.surfaceHighlight,
-  },
-  previewBtnText: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '600',
-    color: Colors.primary,
-  },
-
-  // Seção
-  section: {
-    gap: 10,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 4,
-  },
+  sectionHeader: { paddingHorizontal: 4 },
   sectionTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    fontSize: 13, fontWeight: '700', color: Colors.textSecondary,
+    textTransform: 'uppercase', letterSpacing: 0.8,
   },
   sectionCard: {
     backgroundColor: Colors.surface,
@@ -371,41 +168,18 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     overflow: 'hidden',
   },
-
-  // Linha
   row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 15,
-    gap: 14,
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 16, paddingVertical: 15, gap: 14,
   },
-  rowPressed: {
-    backgroundColor: Colors.surfaceHighlight,
-  },
+  rowPressed: { backgroundColor: Colors.surfaceHighlight },
   rowIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 36, height: 36, borderRadius: 10,
     backgroundColor: 'rgba(79,110,247,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
   },
-  rowIconDanger: {
-    backgroundColor: 'rgba(232,69,96,0.10)',
-  },
-  rowLabel: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '600',
-    color: Colors.text,
-  },
-  rowLabelDanger: {
-    color: Colors.error,
-  },
-  separator: {
-    height: 1,
-    backgroundColor: Colors.border,
-    marginLeft: 66,
-  },
+  rowIconDanger: { backgroundColor: 'rgba(232,69,96,0.10)' },
+  rowLabel: { flex: 1, fontSize: 15, fontWeight: '600', color: Colors.text },
+  rowLabelDanger: { color: Colors.error },
+  separator: { height: 1, backgroundColor: Colors.border, marginLeft: 66 },
 });

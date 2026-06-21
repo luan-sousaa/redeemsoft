@@ -292,7 +292,7 @@ export default function SobreMimScreen() {
           <Pressable style={styles.backBtn} onPress={() => router.back()}>
             <Ionicons name="arrow-back-circle-outline" size={30} color={Colors.text} />
           </Pressable>
-          <Text style={styles.headerTitle} numberOfLines={1}>{user?.name ?? 'Meu Perfil'}</Text>
+          <Text style={styles.headerTitle} numberOfLines={1}>Meu Perfil</Text>
         </View>
 
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
@@ -329,6 +329,25 @@ export default function SobreMimScreen() {
               maxLength={500}
             />
             <Text style={styles.charCount}>{sobre.length}/500</Text>
+          </View>
+
+          {/* Links para Habilidades e Certificados */}
+          <View style={styles.linksSection}>
+            <Pressable style={styles.linkRow} onPress={() => router.push('/(app)/editar-habilidades' as any)}>
+              <View style={styles.linkIcon}>
+                <Ionicons name="code-slash-outline" size={18} color={Colors.primary} />
+              </View>
+              <Text style={styles.linkLabel}>Habilidades</Text>
+              <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
+            </Pressable>
+            <View style={styles.linkDivider} />
+            <Pressable style={styles.linkRow} onPress={() => router.push('/(app)/editar-certificados' as any)}>
+              <View style={styles.linkIcon}>
+                <Ionicons name="ribbon-outline" size={18} color={Colors.primary} />
+              </View>
+              <Text style={styles.linkLabel}>Certificados</Text>
+              <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
+            </Pressable>
           </View>
 
           {/* Projetos */}
@@ -447,6 +466,32 @@ const styles = StyleSheet.create({
   },
 
   saveContainer: { marginTop: 8 },
+
+  linksSection: {
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    overflow: 'hidden',
+    marginBottom: 28,
+  },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  linkIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: Colors.primary + '22',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  linkLabel: { flex: 1, fontSize: 15, fontWeight: '600', color: Colors.text },
+  linkDivider: { height: 1, backgroundColor: Colors.border, marginLeft: 62 },
 });
 
 const modal = StyleSheet.create({

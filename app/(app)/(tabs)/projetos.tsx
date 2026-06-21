@@ -43,8 +43,15 @@ function StatusChip({ status }: { status: string }) {
 // ─── Card candidatura (dev) ───────────────────────────────────────────────────
 
 function CandidaturaCard({ item }: { item: MinhaCandidatura }) {
+  const router = useRouter();
   return (
-    <View style={styles.card}>
+    <Pressable
+      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      onPress={() => router.push({
+        pathname: '/(app)/projeto-detalhe',
+        params: { id: String(item.projetoId) },
+      } as Href)}
+    >
       <View style={styles.cardRow}>
         <Text style={styles.cardTitle} numberOfLines={2}>{item.titulo}</Text>
         <StatusChip status={item.status} />
@@ -59,8 +66,9 @@ function CandidaturaCard({ item }: { item: MinhaCandidatura }) {
           <Ionicons name="time-outline" size={11} color={Colors.textSecondary} />
           <Text style={[styles.chipText, { color: Colors.textSecondary, marginLeft: 3 }]}>{item.prazo}</Text>
         </View>
+        <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} style={{ marginLeft: 'auto' }} />
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -116,7 +124,7 @@ function ProjetosEmpresa() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Meus Projetos</Text>
+        <Text style={styles.headerTitle}>Minhas Solicitações</Text>
         <Pressable
           style={styles.addBtn}
           onPress={() => router.push('/(app)/criar-projeto' as Href)}
@@ -180,7 +188,8 @@ function CandidaturasDev() {
   const carregar = useCallback(async () => {
     try {
       const data = await authService.getMinhaCandidaturas();
-      setCandidaturas(data);
+      // Apenas projetos em que foi aceito (participando ativamente)
+      setCandidaturas(data.filter(c => c.status === 'aceito'));
     } catch {}
     finally { setLoading(false); setRefreshing(false); }
   }, []);
@@ -190,7 +199,7 @@ function CandidaturasDev() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Minhas Candidaturas</Text>
+        <Text style={styles.headerTitle}>Meus Projetos</Text>
       </View>
 
       {loading ? (
@@ -212,8 +221,8 @@ function CandidaturasDev() {
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="document-text-outline" size={56} color={Colors.textSecondary} />
-              <Text style={styles.emptyTitle}>Nenhuma candidatura</Text>
-              <Text style={styles.emptyText}>Explore o marketplace e candidate-se a projetos</Text>
+              <Text style={styles.emptyTitle}>Nenhum projeto ainda</Text>
+              <Text style={styles.emptyText}>Candidate-se a projetos no marketplace e aguarde a aprovação</Text>
             </View>
           }
           renderItem={({ item }) => <CandidaturaCard item={item} />}
@@ -265,6 +274,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     gap: 10,
   },
+  cardPressed: { opacity: 0.75 },
   cardRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   cardTitle: { flex: 1, fontSize: 15, fontWeight: '700', color: Colors.text },
   cardDesc: { fontSize: 13, color: Colors.textSecondary, lineHeight: 18 },

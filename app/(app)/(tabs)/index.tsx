@@ -4,6 +4,7 @@
  * - Dev (developer): marketplace de projetos
  */
 import { Ionicons } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
@@ -27,6 +28,34 @@ import { authService } from '@/services/authService';
 import { api } from '@/services/api';
 import { parseList } from '@/utils/parseList';
 import type { ProjetoEmpresa } from '@/services/authService';
+
+// ─── Sino flutuante de notificações ──────────────────────────────────────────
+
+function NotifBell() {
+  const router = useRouter();
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    api.get<any[]>('/notificacoes')
+      .then(data => setCount(data.filter(n => !n.lida).length))
+      .catch(() => {});
+  }, []);
+
+  return (
+    <Pressable
+      style={styles.bell}
+      onPress={() => router.push('/(app)/notificacoes' as Href)}
+      hitSlop={8}
+    >
+      <MaterialIcons name="notifications-none" size={26} color={Colors.text} />
+      {count > 0 && (
+        <View style={styles.bellBadge}>
+          <Text style={styles.bellBadgeText}>{count > 9 ? '9+' : count}</Text>
+        </View>
+      )}
+    </Pressable>
+  );
+}
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -131,6 +160,12 @@ function HomeEmpresa() {
 
   const header = (
     <>
+      {/* Linha topo: título + sino */}
+      <View style={styles.topRow}>
+        <Text style={styles.topTitle}>Buscar Devs</Text>
+        <NotifBell />
+      </View>
+
       {/* Barra de busca */}
       <View style={styles.searchRow}>
         <Ionicons name="search-outline" size={18} color={Colors.textSecondary} />
@@ -262,9 +297,12 @@ function HomeDev() {
 
   const header = (
     <>
-      <View style={styles.topHeader}>
-        <Text style={styles.topTitle}>Marketplace</Text>
-        <Text style={styles.topSubtitle}>Encontre projetos para trabalhar</Text>
+      <View style={styles.topRow}>
+        <View>
+          <Text style={styles.topTitle}>Marketplace</Text>
+          <Text style={styles.topSubtitle}>Encontre projetos para trabalhar</Text>
+        </View>
+        <NotifBell />
       </View>
 
       <View style={styles.searchRow}>
@@ -351,20 +389,49 @@ const styles = StyleSheet.create({
 
   banner: {
     width: '80%',
-    aspectRatio: 2400 / 1792, // proporção real da imagem
+    aspectRatio: 2400 / 1792,
     borderRadius: 28,
     alignSelf: 'center',
     marginVertical: 12,
     overflow: 'hidden',
   },
 
-  topHeader: {
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 8,
   },
   topTitle: { fontSize: 26, fontWeight: '800', color: Colors.text },
   topSubtitle: { fontSize: 14, color: Colors.textSecondary, marginTop: 2 },
+
+  bell: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#E84560',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+    borderWidth: 1.5,
+    borderColor: Colors.background,
+  },
+  bellBadgeText: { fontSize: 9, fontWeight: '800', color: '#fff' },
 
   searchRow: {
     flexDirection: 'row',

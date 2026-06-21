@@ -67,11 +67,6 @@ export default function PerfilTab() {
           onPress: () => router.push('/(app)/meus-projetos' as Href),
         },
         {
-          icon: 'notifications-outline',
-          label: 'Notificações',
-          onPress: () => router.push('/(app)/notificacoes' as Href),
-        },
-        {
           icon: 'settings-outline',
           label: 'Configurações',
           onPress: () => router.push('/(app)/configuracoes-empresa' as Href),
@@ -82,11 +77,6 @@ export default function PerfilTab() {
           icon: 'person-outline',
           label: 'Meu Perfil',
           onPress: () => router.push('/(app)/sobre-mim' as Href),
-        },
-        {
-          icon: 'notifications-outline',
-          label: 'Notificações',
-          onPress: () => router.push('/(app)/notificacoes' as Href),
         },
         {
           icon: 'settings-outline',
