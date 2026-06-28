@@ -2,24 +2,24 @@
  * Aba "Mensagens" — lista de conversas ativas
  * Igual ao chat.tsx mas sem botão voltar (é uma tab permanente)
  */
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+    ActivityIndicator,
+    FlatList,
+    Image,
+    Pressable,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { Colors } from '@/constants/colors';
-import { api } from '@/services/api';
+import { Colors } from "@/constants/colors";
+import { api } from "@/services/api";
 
 type Conversa = {
   id: string;
@@ -27,13 +27,20 @@ type Conversa = {
   fotoContato: string | null;
   projetoTitulo: string;
   projetoValor: number;
-  tipo: 'dev' | 'empresa';
+  tipo: "dev" | "empresa";
   contratoId?: number | null;
 };
 
 function AvatarConversa({ nome, foto }: { nome: string; foto: string | null }) {
   if (foto) return <Image source={{ uri: foto }} style={styles.avatar} />;
-  const colors = ['#6C63FF', '#E84560', '#F5A623', '#4CAF50', '#00BCD4', '#9C27B0'];
+  const colors = [
+    "#6C63FF",
+    "#E84560",
+    "#F5A623",
+    "#4CAF50",
+    "#00BCD4",
+    "#9C27B0",
+  ];
   const idx = nome.charCodeAt(0) % colors.length;
   return (
     <View style={[styles.avatar, { backgroundColor: colors[idx] }]}>
@@ -42,24 +49,40 @@ function AvatarConversa({ nome, foto }: { nome: string; foto: string | null }) {
   );
 }
 
-function ConversaCard({ conversa, onPress }: { conversa: Conversa; onPress: () => void }) {
+function ConversaCard({
+  conversa,
+  onPress,
+}: {
+  conversa: Conversa;
+  onPress: () => void;
+}) {
   return (
     <Pressable style={styles.card} onPress={onPress}>
       <AvatarConversa nome={conversa.nomeContato} foto={conversa.fotoContato} />
       <View style={styles.cardContent}>
         <View style={styles.cardTopRow}>
-          <Text style={styles.nomeContato} numberOfLines={1}>{conversa.nomeContato}</Text>
+          <Text style={styles.nomeContato} numberOfLines={1}>
+            {conversa.nomeContato}
+          </Text>
           <View style={styles.valorTag}>
             <Text style={styles.valorText}>
-              {conversa.projetoValor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
+              {conversa.projetoValor.toLocaleString("pt-BR", {
+                style: "currency",
+                currency: "BRL",
+                minimumFractionDigits: 0,
+              })}
             </Text>
           </View>
         </View>
         <View style={styles.projetoRow}>
           <Ionicons name="briefcase-outline" size={12} color={Colors.primary} />
-          <Text style={styles.projetoTitulo} numberOfLines={1}>{conversa.projetoTitulo}</Text>
+          <Text style={styles.projetoTitulo} numberOfLines={1}>
+            {conversa.projetoTitulo}
+          </Text>
         </View>
-        <Text style={styles.hint} numberOfLines={1}>Toque para abrir o chat</Text>
+        <Text style={styles.hint} numberOfLines={1}>
+          Toque para abrir o chat
+        </Text>
       </View>
       <Ionicons name="chevron-forward" size={18} color={Colors.textSecondary} />
     </Pressable>
@@ -69,55 +92,67 @@ function ConversaCard({ conversa, onPress }: { conversa: Conversa; onPress: () =
 export default function MensagensTab() {
   const router = useRouter();
   const [conversas, setConversas] = useState<Conversa[]>([]);
-  const [filtro, setFiltro] = useState('');
+  const [filtro, setFiltro] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const carregar = useCallback(async () => {
     try {
-      const data = await api.get<any[]>('/chat/conversas');
-      setConversas(data.map(c => ({
-        id: String(c.id),
-        nomeContato: c.nomeContato,
-        fotoContato: c.fotoContato ?? null,
-        projetoTitulo: c.projetoTitulo,
-        projetoValor: c.projetoValor,
-        tipo: c.tipo,
-        contratoId: c.contratoId ?? null,
-      })));
-    } catch {}
-    finally { setIsLoading(false); setRefreshing(false); }
+      const data = await api.get<any[]>("/chat/conversas");
+      setConversas(
+        data.map((c) => ({
+          id: String(c.id),
+          nomeContato: c.nomeContato,
+          fotoContato: c.fotoContato ?? null,
+          projetoTitulo: c.projetoTitulo,
+          projetoValor: c.projetoValor,
+          tipo: c.tipo,
+          contratoId: c.contratoId ?? null,
+        })),
+      );
+    } catch {
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+    }
   }, []);
 
-  useEffect(() => { carregar(); }, [carregar]);
+  useEffect(() => {
+    carregar();
+  }, [carregar]);
 
-  const filtradas = conversas.filter(c =>
-    c.nomeContato.toLowerCase().includes(filtro.toLowerCase()) ||
-    c.projetoTitulo.toLowerCase().includes(filtro.toLowerCase())
+  const filtradas = conversas.filter(
+    (c) =>
+      c.nomeContato.toLowerCase().includes(filtro.toLowerCase()) ||
+      c.projetoTitulo.toLowerCase().includes(filtro.toLowerCase()),
   );
 
   function abrirConversa(c: Conversa) {
     router.push({
-      pathname: '/(app)/chat-conversa' as any,
+      pathname: "/(app)/chat-conversa" as any,
       params: {
         conversaId: c.id,
         nomeContato: c.nomeContato,
-        fotoContato: c.fotoContato ?? '',
+        fotoContato: c.fotoContato ?? "",
         projetoTitulo: c.projetoTitulo,
         projetoValor: String(c.projetoValor),
-        contratoId: String(c.contratoId ?? ''),
+        contratoId: String(c.contratoId ?? ""),
       },
     });
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={["top"]}>
       <View style={styles.header}>
         <Text style={styles.title}>Mensagens</Text>
       </View>
 
       <View style={styles.searchContainer}>
-        <Ionicons name="search-outline" size={18} color={Colors.textSecondary} />
+        <Ionicons
+          name="search-outline"
+          size={18}
+          color={Colors.textSecondary}
+        />
         <TextInput
           style={styles.searchInput}
           value={filtro}
@@ -126,8 +161,12 @@ export default function MensagensTab() {
           placeholderTextColor={Colors.textSecondary}
         />
         {filtro.length > 0 && (
-          <Pressable onPress={() => setFiltro('')} hitSlop={8}>
-            <Ionicons name="close-circle" size={18} color={Colors.textSecondary} />
+          <Pressable onPress={() => setFiltro("")} hitSlop={8}>
+            <Ionicons
+              name="close-circle"
+              size={18}
+              color={Colors.textSecondary}
+            />
           </Pressable>
         )}
       </View>
@@ -138,27 +177,49 @@ export default function MensagensTab() {
         </View>
       ) : filtradas.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Ionicons name="chatbubbles-outline" size={70} color={Colors.textSecondary} />
+          <Ionicons
+            name="chatbubbles-outline"
+            size={70}
+            color={Colors.textSecondary}
+          />
           <Text style={styles.emptyTitle}>
-            {filtro ? 'Nenhuma conversa encontrada' : 'Nenhuma conversa ainda'}
+            {filtro ? "Nenhuma conversa encontrada" : "Nenhuma conversa ainda"}
           </Text>
           <Text style={styles.emptyText}>
             {filtro
-              ? 'Tente buscar por outro nome ou projeto'
-              : 'As conversas aparecem aqui quando uma candidatura for aceita'}
+              ? "Tente buscar por outro nome ou projeto"
+              : "As conversas aparecem aqui quando uma candidatura for aceita"}
           </Text>
+          {!filtro && (
+            <Pressable
+              style={styles.emptyAction}
+              onPress={() => router.push("/(app)/(tabs)/projetos" as any)}
+            >
+              <Ionicons
+                name="briefcase-outline"
+                size={20}
+                color={Colors.primary}
+              />
+              <Text style={styles.emptyActionText}>
+                Ver Projetos Disponíveis
+              </Text>
+            </Pressable>
+          )}
         </View>
       ) : (
         <FlatList
           data={filtradas}
-          keyExtractor={item => item.id}
+          keyExtractor={(item) => item.id}
           contentContainerStyle={styles.lista}
           showsVerticalScrollIndicator={false}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={() => { setRefreshing(true); carregar(); }}
+              onRefresh={() => {
+                setRefreshing(true);
+                carregar();
+              }}
               tintColor={Colors.primary}
             />
           }
@@ -178,42 +239,91 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 8,
   },
-  title: { fontSize: 26, fontWeight: '800', color: Colors.text },
+  title: { fontSize: 26, fontWeight: "800", color: Colors.text },
   searchContainer: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
     backgroundColor: Colors.surface,
-    borderRadius: 14, borderWidth: 1, borderColor: Colors.border,
-    marginHorizontal: 16, marginBottom: 12,
-    paddingHorizontal: 14, paddingVertical: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   searchInput: { flex: 1, fontSize: 15, color: Colors.text },
-  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  loadingContainer: { flex: 1, alignItems: "center", justifyContent: "center" },
   lista: { paddingHorizontal: 16, paddingBottom: 20 },
   separator: { height: 1, backgroundColor: Colors.border, marginLeft: 76 },
   card: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
     paddingVertical: 14,
   },
   avatar: {
-    width: 52, height: 52, borderRadius: 26,
-    alignItems: 'center', justifyContent: 'center',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: "center",
+    justifyContent: "center",
     flexShrink: 0,
   },
-  avatarLetter: { fontSize: 20, fontWeight: '800', color: '#fff' },
+  avatarLetter: { fontSize: 20, fontWeight: "800", color: "#fff" },
   cardContent: { flex: 1, gap: 3 },
-  cardTopRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  nomeContato: { flex: 1, fontSize: 16, fontWeight: '700', color: Colors.text },
+  cardTopRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  nomeContato: { flex: 1, fontSize: 16, fontWeight: "700", color: Colors.text },
   valorTag: {
-    backgroundColor: Colors.primary + '22',
-    borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2,
+    backgroundColor: Colors.primary + "22",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
-  valorText: { fontSize: 12, fontWeight: '700', color: Colors.primary },
-  projetoRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  projetoTitulo: { fontSize: 12, color: Colors.primary, fontWeight: '600', flex: 1 },
+  valorText: { fontSize: 12, fontWeight: "700", color: Colors.primary },
+  projetoRow: { flexDirection: "row", alignItems: "center", gap: 5 },
+  projetoTitulo: {
+    fontSize: 12,
+    color: Colors.primary,
+    fontWeight: "600",
+    flex: 1,
+  },
   hint: { fontSize: 13, color: Colors.textSecondary },
   emptyContainer: {
-    flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 32,
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    paddingHorizontal: 32,
   },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: Colors.text, textAlign: 'center' },
-  emptyText: { fontSize: 13, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: Colors.text,
+    textAlign: "center",
+  },
+  emptyText: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  emptyAction: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: Colors.primary + "22",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: Colors.primary + "44",
+  },
+  emptyActionText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.primary,
+  },
 });
