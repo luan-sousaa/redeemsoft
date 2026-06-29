@@ -2,7 +2,7 @@
 // Alterado: item "Perfil" renomeado para "Meu Perfil" e agora navega para sobre-mim.
 // Avatar e nome corrigidos para ler de ProfileContext e AuthContext.user.name.
 
-import { Ionicons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import type { Href } from "expo-router";
 import { useRouter } from "expo-router";
@@ -25,7 +25,7 @@ import { useProfile } from "@/contexts/ProfileContext";
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
 type DrawerNavItem = {
-  icon: React.ComponentProps<typeof Ionicons>["name"];
+  icon: React.ComponentProps<typeof Feather>["name"];
   label: string;
   onPress: () => void;
   active?: boolean;
@@ -39,9 +39,9 @@ function NavItem({ item }: { item: DrawerNavItem }) {
       style={[styles.drawerItem, item.active && styles.drawerItemActive]}
       onPress={item.onPress}
     >
-      <Ionicons
+      <Feather
         name={item.icon}
-        size={22}
+        size={20}
         color={item.active ? Colors.primary : Colors.text}
       />
       <Text
@@ -76,7 +76,7 @@ export function DrawerMenu({
 
   const devItems: DrawerNavItem[] = [
     {
-      icon: "home-outline",
+      icon: "home",
       label: "Home",
       onPress: () => {
         onClose();
@@ -85,7 +85,7 @@ export function DrawerMenu({
       active: activeScreen === "home",
     },
     {
-      icon: "person-outline",
+      icon: "user",
       label: "Meu Perfil",
       onPress: () => {
         onClose();
@@ -94,7 +94,7 @@ export function DrawerMenu({
       active: activeScreen === "sobre-mim",
     },
     {
-      icon: "chatbubble-outline",
+      icon: "message-circle",
       label: "Chat",
       onPress: () => {
         onClose();
@@ -103,7 +103,7 @@ export function DrawerMenu({
       active: activeScreen === "mensagens",
     },
     {
-      icon: "search-outline",
+      icon: "search",
       label: "Buscar",
       onPress: () => {
         onClose();
@@ -112,7 +112,7 @@ export function DrawerMenu({
       active: activeScreen === "marketplace",
     },
     {
-      icon: "briefcase-outline",
+      icon: "briefcase",
       label: "Minhas Candidaturas",
       onPress: () => {
         onClose();
@@ -120,9 +120,8 @@ export function DrawerMenu({
       },
       active: activeScreen === "minhas-candidaturas",
     },
-
     {
-      icon: "notifications-outline",
+      icon: "bell",
       label: "Notificações",
       onPress: () => {
         onClose();
@@ -131,7 +130,7 @@ export function DrawerMenu({
       active: activeScreen === "notificacoes",
     },
     {
-      icon: "settings-outline",
+      icon: "settings",
       label: "Configurações",
       onPress: () => {
         onClose();
@@ -143,7 +142,7 @@ export function DrawerMenu({
 
   const empresaItems: DrawerNavItem[] = [
     {
-      icon: "home-outline",
+      icon: "home",
       label: "Home",
       onPress: () => {
         onClose();
@@ -152,7 +151,7 @@ export function DrawerMenu({
       active: activeScreen === "home",
     },
     {
-      icon: "business-outline",
+      icon: "user",
       label: "Meu Perfil",
       onPress: () => {
         onClose();
@@ -161,7 +160,7 @@ export function DrawerMenu({
       active: activeScreen === "perfil-empresa",
     },
     {
-      icon: "chatbubble-outline",
+      icon: "message-circle",
       label: "Chat",
       onPress: () => {
         onClose();
@@ -170,7 +169,7 @@ export function DrawerMenu({
       active: activeScreen === "mensagens",
     },
     {
-      icon: "search-outline",
+      icon: "search",
       label: "Buscar",
       onPress: () => {
         onClose();
@@ -179,7 +178,7 @@ export function DrawerMenu({
       active: activeScreen === "buscar-desenvolvedores",
     },
     {
-      icon: "document-text-outline",
+      icon: "file-text",
       label: "Minhas Solicitações",
       onPress: () => {
         onClose();
@@ -188,7 +187,7 @@ export function DrawerMenu({
       active: activeScreen === "meus-projetos",
     },
     {
-      icon: "add-circle-outline",
+      icon: "plus-circle",
       label: "Nova Solicitação",
       onPress: () => {
         onClose();
@@ -197,7 +196,7 @@ export function DrawerMenu({
       active: activeScreen === "criar-projeto",
     },
     {
-      icon: "notifications-outline",
+      icon: "bell",
       label: "Notificações",
       onPress: () => {
         onClose();
@@ -206,7 +205,7 @@ export function DrawerMenu({
       active: activeScreen === "notificacoes",
     },
     {
-      icon: "settings-outline",
+      icon: "settings",
       label: "Configurações",
       onPress: () => {
         onClose();
@@ -233,9 +232,9 @@ export function DrawerMenu({
         <SafeAreaView style={styles.drawerSafe}>
           {/* Botão fechar (chevron esquerdo) */}
           <Pressable onPress={onClose} style={styles.drawerCloseBtn}>
-            <Ionicons
-              name="chevron-back"
-              size={24}
+            <Feather
+              name="chevron-left"
+              size={22}
               color={Colors.textSecondary}
             />
           </Pressable>
