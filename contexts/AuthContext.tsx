@@ -1,7 +1,10 @@
-import React, { createContext, useContext, useReducer } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useContext, useEffect, useReducer } from 'react';
 import { authService, type RegisterData, type User } from '@/services/authService';
-import { tokenStorage } from '@/services/api';
+import { api, tokenStorage } from '@/services/api';
 import { profileService } from '@/services/profileService';
+
+const USER_KEY = '@redeemsoft:user';
 
 type AuthState = {
   user: User | null;
@@ -43,12 +46,33 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(authReducer, {
     user: null,
-    isLoading: false,
+    isLoading: true,
     isAuthenticated: false,
   });
 
+  useEffect(() => {
+    async function initAuth() {
+      try {
+        const token = await tokenStorage.loadFromStorage();
+        if (!token) { dispatch({ type: 'SET_USER', payload: null }); return; }
+
+        const raw = await AsyncStorage.getItem(USER_KEY);
+        if (!raw) { tokenStorage.remove(); dispatch({ type: 'SET_USER', payload: null }); return; }
+
+        await api.get('/me');
+        dispatch({ type: 'SET_USER', payload: JSON.parse(raw) as User });
+      } catch {
+        tokenStorage.remove();
+        AsyncStorage.removeItem(USER_KEY).catch(() => {});
+        dispatch({ type: 'SET_USER', payload: null });
+      }
+    }
+    initAuth();
+  }, []);
+
   function setUser(token: string, user: User) {
     tokenStorage.save(token);
+    AsyncStorage.setItem(USER_KEY, JSON.stringify(user)).catch(() => {});
     dispatch({ type: 'SET_USER', payload: user });
   }
 
@@ -74,6 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   function logout() {
     tokenStorage.remove();
+    AsyncStorage.removeItem(USER_KEY).catch(() => {});
     profileService.clearCache();
     dispatch({ type: 'SET_USER', payload: null });
   }
