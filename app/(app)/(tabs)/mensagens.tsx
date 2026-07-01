@@ -1,6 +1,5 @@
 /**
  * Aba "Mensagens" — lista de conversas ativas
- * Igual ao chat.tsx mas sem botão voltar (é uma tab permanente)
  */
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -29,6 +28,7 @@ type Conversa = {
   projetoValor: number;
   tipo: "dev" | "empresa";
   contratoId?: number | null;
+  naoLidas: number;
 };
 
 function AvatarConversa({ nome, foto }: { nome: string; foto: string | null }) {
@@ -56,12 +56,22 @@ function ConversaCard({
   conversa: Conversa;
   onPress: () => void;
 }) {
+  const hasUnread = conversa.naoLidas > 0;
   return (
     <Pressable style={styles.card} onPress={onPress}>
-      <AvatarConversa nome={conversa.nomeContato} foto={conversa.fotoContato} />
+      <View style={styles.avatarWrapper}>
+        <AvatarConversa nome={conversa.nomeContato} foto={conversa.fotoContato} />
+        {hasUnread && (
+          <View style={styles.unreadBadge}>
+            <Text style={styles.unreadText}>
+              {conversa.naoLidas > 99 ? "99+" : String(conversa.naoLidas)}
+            </Text>
+          </View>
+        )}
+      </View>
       <View style={styles.cardContent}>
         <View style={styles.cardTopRow}>
-          <Text style={styles.nomeContato} numberOfLines={1}>
+          <Text style={[styles.nomeContato, hasUnread && styles.nomeContatoBold]} numberOfLines={1}>
             {conversa.nomeContato}
           </Text>
           <View style={styles.valorTag}>
@@ -80,8 +90,8 @@ function ConversaCard({
             {conversa.projetoTitulo}
           </Text>
         </View>
-        <Text style={styles.hint} numberOfLines={1}>
-          Toque para abrir o chat
+        <Text style={[styles.hint, hasUnread && styles.hintUnread]} numberOfLines={1}>
+          {hasUnread ? `${conversa.naoLidas} mensagem${conversa.naoLidas > 1 ? 'ns' : ''} não lida${conversa.naoLidas > 1 ? 's' : ''}` : 'Toque para abrir o chat'}
         </Text>
       </View>
       <Ionicons name="chevron-forward" size={18} color={Colors.textSecondary} />
@@ -108,6 +118,7 @@ export default function MensagensTab() {
           projetoValor: c.projetoValor,
           tipo: c.tipo,
           contratoId: c.contratoId ?? null,
+          naoLidas: c.naoLidas ?? 0,
         })),
       );
     } catch {
@@ -263,6 +274,7 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 14,
   },
+  avatarWrapper: { position: "relative" },
   avatar: {
     width: 52,
     height: 52,
@@ -272,9 +284,25 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   avatarLetter: { fontSize: 20, fontWeight: "800", color: "#fff" },
+  unreadBadge: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: Colors.error,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: Colors.background,
+  },
+  unreadText: { fontSize: 10, fontWeight: "800", color: "#fff" },
   cardContent: { flex: 1, gap: 3 },
   cardTopRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  nomeContato: { flex: 1, fontSize: 16, fontWeight: "700", color: Colors.text },
+  nomeContato: { flex: 1, fontSize: 16, fontWeight: "600", color: Colors.text },
+  nomeContatoBold: { fontWeight: "800" },
   valorTag: {
     backgroundColor: Colors.primary + "22",
     borderRadius: 8,
@@ -290,6 +318,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   hint: { fontSize: 13, color: Colors.textSecondary },
+  hintUnread: { color: Colors.error, fontWeight: "600" },
   emptyContainer: {
     flex: 1,
     alignItems: "center",

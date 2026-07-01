@@ -237,7 +237,7 @@ export default function ChatConversaScreen() {
     }
   }, [contratoId, myId]);
 
-  // Carga inicial
+  // Carga inicial + marca mensagens como lidas
   useEffect(() => {
     if (!contratoId) { setIsLoading(false); return; }
     (async () => {
@@ -246,6 +246,8 @@ export default function ChatConversaScreen() {
         lastIdRef.current = data[data.length - 1]?.idMensagem ?? 0;
         setMessages(data.map(rawToMessage));
         setTimeout(() => listRef.current?.scrollToEnd({ animated: false }), 100);
+        // Marca mensagens do outro lado como lidas (atualiza badge)
+        api.patch(`/contrato/${contratoId}/mensagens/lidas`, {}).catch(() => {});
       } catch {
         // silencioso
       } finally {

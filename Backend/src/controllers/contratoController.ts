@@ -9,7 +9,7 @@
 //   7. GET /contrato/:id/mensagens — lista mensagens em ordem cronológica
 
 import type { Request, Response } from 'express';
-import { eq, asc } from 'drizzle-orm';
+import { eq, asc, and, ne } from 'drizzle-orm';
 import { db } from '../db/db';
 import {
   contrato,
@@ -240,5 +240,28 @@ export const buscarMensagens = async (req: Request, res: Response) => {
   } catch (err) {
     console.error('[contrato] buscarMensagens:', err);
     return res.status(500).json({ mensagem: 'Erro ao buscar mensagens.' });
+  }
+};
+
+// ─── PATCH /contrato/:id/mensagens/lidas — marca todas como lidas para o usuário atual ──
+export const marcarMensagensLidas = async (req: Request, res: Response) => {
+  const contratoId = Number(req.params['id']);
+  if (isNaN(contratoId)) return res.status(400).json({ mensagem: 'ID inválido.' });
+
+  const { type } = req.user ?? {};
+  const autorTipoRemetente: 'empresa' | 'dev' = type === 'client' ? 'dev' : 'empresa';
+
+  try {
+    await db.update(mensagem)
+      .set({ lida: 1 })
+      .where(and(
+        eq(mensagem.contratoId, contratoId),
+        eq(mensagem.autorTipo, autorTipoRemetente),
+        ne(mensagem.lida, 1),
+      ));
+    return res.status(200).json({ ok: true });
+  } catch (err) {
+    console.error('[contrato] marcarMensagensLidas:', err);
+    return res.status(500).json({ mensagem: 'Erro ao marcar mensagens como lidas.' });
   }
 };

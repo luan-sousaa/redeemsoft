@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { db } from '../db/db';
-import { desenvolvedor, usuario, aplicacao, novoProjeto, cliente, contrato } from '../db/schema';
-import { and, eq, ne } from 'drizzle-orm';
+import { desenvolvedor, usuario, aplicacao, novoProjeto, cliente, contrato, mensagem } from '../db/schema';
+import { and, eq, ne, count, sql } from 'drizzle-orm';
 
 export const buscarDesenvolvedorPorId = async (req: Request, res: Response) => {
   const id = Number(req.params['id']);
@@ -174,6 +174,20 @@ export const buscarConversas = async (req: Request, res: Response) => {
       // Deduplica por candidaturaId — LEFT JOIN pode gerar linhas extras
       const seen = new Set<number>();
       const unicas = conversas.filter(c => seen.has(c.candidaturaId) ? false : (seen.add(c.candidaturaId), true));
+
+      // Conta não lidas por contrato (mensagens de 'empresa' não lidas pelo dev)
+      const contratoIds = unicas.map(c => c.contratoId).filter(Boolean) as number[];
+      const naoLidasMap: Record<number, number> = {};
+      if (contratoIds.length > 0) {
+        for (const cid of contratoIds) {
+          const [row] = await db
+            .select({ total: count() })
+            .from(mensagem)
+            .where(and(eq(mensagem.contratoId, cid), eq(mensagem.autorTipo, 'empresa'), eq(mensagem.lida, 0)));
+          naoLidasMap[cid] = row?.total ?? 0;
+        }
+      }
+
       return res.status(200).json(unicas.map(c => ({
         id: String(c.candidaturaId),
         nomeContato: c.empresaNome,
@@ -182,6 +196,7 @@ export const buscarConversas = async (req: Request, res: Response) => {
         projetoValor: c.projetoValor,
         tipo: 'empresa',
         contratoId: c.contratoId ?? null,
+        naoLidas: c.contratoId ? (naoLidasMap[c.contratoId] ?? 0) : 0,
       })));
     }
 
@@ -204,6 +219,20 @@ export const buscarConversas = async (req: Request, res: Response) => {
 
       const seen2 = new Set<number>();
       const unicas2 = conversas.filter(c => seen2.has(c.candidaturaId) ? false : (seen2.add(c.candidaturaId), true));
+
+      // Conta não lidas por contrato (mensagens de 'dev' não lidas pela empresa)
+      const contratoIds2 = unicas2.map(c => c.contratoId).filter(Boolean) as number[];
+      const naoLidasMap2: Record<number, number> = {};
+      if (contratoIds2.length > 0) {
+        for (const cid of contratoIds2) {
+          const [row] = await db
+            .select({ total: count() })
+            .from(mensagem)
+            .where(and(eq(mensagem.contratoId, cid), eq(mensagem.autorTipo, 'dev'), eq(mensagem.lida, 0)));
+          naoLidasMap2[cid] = row?.total ?? 0;
+        }
+      }
+
       return res.status(200).json(unicas2.map(c => ({
         id: String(c.candidaturaId),
         nomeContato: c.devNome,
@@ -212,6 +241,7 @@ export const buscarConversas = async (req: Request, res: Response) => {
         projetoValor: c.projetoValor,
         tipo: 'dev',
         contratoId: c.contratoId ?? null,
+        naoLidas: c.contratoId ? (naoLidasMap2[c.contratoId] ?? 0) : 0,
       })));
     }
 

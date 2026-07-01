@@ -113,6 +113,7 @@ export const mensagem = sqliteTable("mensagem", {
   autorId:   integer("autorId").notNull(),
   autorTipo: text("autorTipo", { enum: ["empresa", "dev"] }).notNull(),
   texto:     text("texto").notNull(),
+  lida:      integer("lida").notNull().default(0),
   criadoEm:  text("criadoEm").notNull().default(sql`(datetime('now'))`),
 });
 

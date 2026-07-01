@@ -7,6 +7,7 @@ import {
   confirmarEntrega,
   enviarMensagem,
   buscarMensagens,
+  marcarMensagensLidas,
 } from '../controllers/contratoController.js';
 import { authMiddleware } from '../middleware/auth.js';
 
@@ -22,5 +23,6 @@ router.patch('/contrato/:id/pagamento',            authMiddleware, atualizarPaga
 router.patch('/contrato/:id/confirmar-entrega',    authMiddleware, confirmarEntrega);
 router.post('/contrato/:id/mensagem',              authMiddleware, enviarMensagem);
 router.get('/contrato/:id/mensagens',              authMiddleware, buscarMensagens);
+router.patch('/contrato/:id/mensagens/lidas',      authMiddleware, marcarMensagensLidas);
 
 export default router;
