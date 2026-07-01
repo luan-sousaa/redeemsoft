@@ -141,3 +141,42 @@ Babel/Metro exige parênteses: `{a ?? (b || 'fallback')}` — sem os parênteses
 - Nunca usar `expo start --ios` — falha com erro de runtime inválido. Sempre `npx expo run:ios --device "iPhone 17 Pro"`.
 - Bundle identifier: `com.anonymous.redeemsoft`
 - Google Sign-In ainda não configurado.
+
+**Sempre usar `as Href` e o path completo em navegações**
+`router.push` e `router.replace` sem `as Href` ou com pathname incompleto causam "unmatched route, page could not be found". Toda navegação deve usar o path completo com o grupo de rota (`/(app)/nome-da-tela`) e o cast `as Href`:
+```ts
+router.push({ pathname: '/(app)/chat-conversa' as Href, params: {...} })
+router.replace({ pathname: '/(app)/pagamento-pix' as Href, params: {...} })
+```
+Motivo do bug: `minhas-candidaturas.tsx` navegava para `'/chat'` (rota inexistente) em vez de `'/(app)/chat-conversa'`.
+
+**Sempre usar `updateProfile` do ProfileContext para salvar dados do dev**
+`profileService.update()` atualiza apenas o cache interno e a API — não atualiza o `ProfileContext`. Chamar direto o service faz com que telas que leem do contexto (como a aba `perfil.tsx`) não reflitam as mudanças imediatamente. Sempre usar `updateProfile()` de `useProfile()`, que atualiza estado, AsyncStorage e API ao mesmo tempo. Motivo do bug: `sobre-mim.tsx` chamava `profileService.update()` diretamente sem atualizar o contexto.
+
+**Navegação para detalhe deve passar todos os params**
+`projeto-detalhe.tsx` não busca dados da API — lê tudo dos params de URL. Sempre passar todos os campos ao navegar:
+```ts
+router.push({
+  pathname: '/(app)/projeto-detalhe',
+  params: {
+    id: item.id,
+    titulo: item.titulo,
+    descricao: item.descricao,
+    preco: String(item.orcamento),
+    prazo: String(item.prazo),
+    stack: Array.isArray(item.stack) ? item.stack.join(', ') : (item.stack ?? ''),
+    modalidades: JSON.stringify(item.modalidades),
+  },
+})
+```
+Passar só `{ id }` resulta em tela de detalhe vazia (descrição e tecnologias em branco).
+
+**`catch {}` vazio engole erros de parse**
+O backend salva campos como `stack`, `habilidades`, `certificacoes` como strings simples (`"DBA"`, `"Java"`) ou JSON (`"[\"React\"]"`). Nunca usar `JSON.parse()` diretamente nesses campos — se a string não for JSON válido, o erro é engolido pelo `catch {}` do `carregar`, `setState` nunca é chamado e a lista fica vazia sem nenhuma indicação visual de erro. Sempre usar `parseList()` de `@/utils/parseList`, que tenta `JSON.parse` e faz fallback para `split(',')`.
+```ts
+// Errado — estoura se stack = "DBA"
+stack: typeof p.stack === 'string' ? JSON.parse(p.stack) : [],
+
+// Correto
+stack: parseList(p.stack),
+```

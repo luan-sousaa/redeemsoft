@@ -8,6 +8,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import type { Href } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -113,7 +114,7 @@ export default function ConfirmarContratacaoScreen() {
       // Navega para checkout; amount = valorProjeto (centavos) para que
       // checkout recalcule a taxa e exiba o breakdown corretamente.
       router.replace({
-        pathname: '/(app)/checkout',
+        pathname: '/(app)/checkout' as Href,
         params: {
           contratoId:  String(contrato.id),
           amount:      String(contrato.valorProjeto),

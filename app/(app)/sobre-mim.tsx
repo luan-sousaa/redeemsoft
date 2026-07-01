@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/Button';
 import { ProjetoCard } from '@/components/ProjetoCard';
 import { Colors } from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/contexts/ProfileContext';
 import { profileService, type ProjetoDev } from '@/services/profileService';
 
 const GRID_GAP = 12;
@@ -30,7 +31,9 @@ const GRID_PADDING = 24;
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
 
-async function pickFromGallery(): Promise<string | null> {
+type FotoResult = { uri: string; base64: string };
+
+async function pickFromGallery(): Promise<FotoResult | null> {
   const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (status !== 'granted') {
     Alert.alert('Permissão necessária', 'Permita o acesso à galeria nas configurações.');
@@ -39,14 +42,16 @@ async function pickFromGallery(): Promise<string | null> {
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],
     allowsEditing: true,
-    aspect: [4, 3],
+    aspect: [1, 1],
     quality: 0.8,
+    base64: true,
   });
-  if (result.canceled) return null;
-  return result.assets[0].uri;
+  if (result.canceled || !result.assets[0].base64) return null;
+  const asset = result.assets[0];
+  return { uri: asset.uri, base64: `data:image/jpeg;base64,${asset.base64}` };
 }
 
-async function pickFromCamera(): Promise<string | null> {
+async function pickFromCamera(): Promise<FotoResult | null> {
   const { status } = await ImagePicker.requestCameraPermissionsAsync();
   if (status !== 'granted') {
     Alert.alert('Permissão necessária', 'Permita o acesso à câmera nas configurações.');
@@ -54,14 +59,16 @@ async function pickFromCamera(): Promise<string | null> {
   }
   const result = await ImagePicker.launchCameraAsync({
     allowsEditing: true,
-    aspect: [4, 3],
+    aspect: [1, 1],
     quality: 0.8,
+    base64: true,
   });
-  if (result.canceled) return null;
-  return result.assets[0].uri;
+  if (result.canceled || !result.assets[0].base64) return null;
+  const asset = result.assets[0];
+  return { uri: asset.uri, base64: `data:image/jpeg;base64,${asset.base64}` };
 }
 
-function showImageSourcePicker(onPick: (uri: string | null) => void) {
+function showImageSourcePicker(onPick: (result: FotoResult | null) => void) {
   if (Platform.OS === 'ios') {
     ActionSheetIOS.showActionSheetWithOptions(
       { options: ['Cancelar', 'Câmera', 'Galeria'], cancelButtonIndex: 0 },
@@ -71,7 +78,7 @@ function showImageSourcePicker(onPick: (uri: string | null) => void) {
       }
     );
   } else {
-    Alert.alert('Imagem do projeto', 'Escolha a origem', [
+    Alert.alert('Foto de perfil', 'Escolha a origem', [
       { text: 'Cancelar', style: 'cancel', onPress: () => onPick(null) },
       { text: 'Câmera', onPress: async () => onPick(await pickFromCamera()) },
       { text: 'Galeria', onPress: async () => onPick(await pickFromGallery()) },
@@ -222,9 +229,11 @@ function ProjetoModal({ visible, projeto, onClose, onSave }: ProjetoModalProps) 
 export default function SobreMimScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const { updateProfile } = useProfile();
 
   const [sobre, setSobre] = useState('');
   const [fotoUri, setFotoUri] = useState<string | null>(null);
+  const [fotoBase64, setFotoBase64] = useState<string | null>(null);
   const [projetos, setProjetos] = useState<ProjetoDev[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -239,7 +248,12 @@ export default function SobreMimScreen() {
   }, []);
 
   function handleFotoPress() {
-    showImageSourcePicker((uri) => { if (uri) setFotoUri(uri); });
+    showImageSourcePicker((result) => {
+      if (result) {
+        setFotoUri(result.uri);
+        setFotoBase64(result.base64);
+      }
+    });
   }
 
   function abrirModal(projeto?: ProjetoDev) {
@@ -274,7 +288,12 @@ export default function SobreMimScreen() {
   async function handleSalvar() {
     setIsLoading(true);
     try {
-      await profileService.update({ sobreMim: sobre, fotoUri, projetos });
+      await updateProfile({
+        sobreMim: sobre,
+        fotoUri,
+        ...(fotoBase64 ? { foto: fotoBase64 } : {}),
+        projetos,
+      });
       Toast.show({ type: 'success', text1: 'Perfil atualizado!', text2: 'Suas informações foram salvas.' });
       router.back();
     } catch {

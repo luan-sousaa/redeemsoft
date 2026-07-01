@@ -273,7 +273,7 @@ function HomeDev() {
         orcamento: p.orcamento,
         prazo: p.prazo,
         modalidades: [p.modalidade ?? 'H'],
-        stack: typeof p.stack === 'string' ? JSON.parse(p.stack) : (p.stack ?? []),
+        stack: parseList(p.stack),
         status: p.status ?? 'ativo',
         candidaturas: [],
         dataCriacao: new Date(p.dataCriacao ?? Date.now()),
@@ -333,7 +333,15 @@ function HomeDev() {
       projeto={item}
       onPress={() => router.push({
         pathname: '/(app)/projeto-detalhe',
-        params: { id: item.id },
+        params: {
+          id: item.id,
+          titulo: item.titulo,
+          descricao: item.descricao,
+          preco: String(item.orcamento),
+          prazo: String(item.prazo),
+          stack: Array.isArray(item.stack) ? item.stack.join(', ') : (item.stack ?? ''),
+          modalidades: JSON.stringify(item.modalidades),
+        },
       } as Href)}
     />
   );

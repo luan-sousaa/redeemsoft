@@ -117,7 +117,7 @@ export default function MinhasCandidaturasScreen() {
     try {
       const c = await authService.getContratoPorProjeto(cand.projetoId);
       router.push({
-        pathname: '/chat',
+        pathname: '/(app)/chat-conversa' as Href,
         params: { contratoId: String(c.id), projetoNome: cand.titulo, devNome: user?.name ?? '' },
       });
     } catch {
